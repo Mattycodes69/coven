@@ -12,18 +12,30 @@ pub struct HarnessSummary {
     pub install_hint: &'static str,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum HarnessLaunchMode {
+    Interactive,
+    NonInteractive,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HarnessCommandSpec {
     pub id: &'static str,
     pub label: &'static str,
     pub executable: &'static str,
-    pub prompt_prefix_args: &'static [&'static str],
+    pub interactive_prompt_prefix_args: &'static [&'static str],
+    pub non_interactive_prompt_prefix_args: &'static [&'static str],
     pub install_hint: &'static str,
 }
 
 impl HarnessCommandSpec {
-    pub fn prompt_args(&self, prompt: &str) -> Vec<String> {
-        self.prompt_prefix_args
+    pub fn prompt_args(&self, prompt: &str, mode: HarnessLaunchMode) -> Vec<String> {
+        let prefix_args = match mode {
+            HarnessLaunchMode::Interactive => self.interactive_prompt_prefix_args,
+            HarnessLaunchMode::NonInteractive => self.non_interactive_prompt_prefix_args,
+        };
+
+        prefix_args
             .iter()
             .map(|arg| (*arg).to_string())
             .chain(std::iter::once(prompt.to_string()))
@@ -50,14 +62,21 @@ pub fn built_in_harness_specs() -> Vec<HarnessCommandSpec> {
             id: "codex",
             label: "Codex",
             executable: "codex",
-            prompt_prefix_args: &[],
+            interactive_prompt_prefix_args: &[],
+            non_interactive_prompt_prefix_args: &[
+                "exec",
+                "--skip-git-repo-check",
+                "--color",
+                "never",
+            ],
             install_hint: "Install or authenticate the Codex CLI, then retry `coven doctor`.",
         },
         HarnessCommandSpec {
             id: "claude",
             label: "Claude Code",
             executable: "claude",
-            prompt_prefix_args: &[],
+            interactive_prompt_prefix_args: &[],
+            non_interactive_prompt_prefix_args: &["--print"],
             install_hint: "Install or authenticate Claude Code, then retry `coven doctor`.",
         },
     ]
@@ -66,13 +85,14 @@ pub fn built_in_harness_specs() -> Vec<HarnessCommandSpec> {
 pub fn command_parts_for_harness(
     harness_id: &str,
     prompt: &str,
+    mode: HarnessLaunchMode,
 ) -> Result<(&'static str, Vec<String>)> {
     let spec = built_in_harness_specs()
         .into_iter()
         .find(|spec| spec.id == harness_id)
         .ok_or_else(|| anyhow!("unsupported harness `{harness_id}`"))?;
 
-    Ok((spec.executable, spec.prompt_args(prompt)))
+    Ok((spec.executable, spec.prompt_args(prompt, mode)))
 }
 
 fn executable_exists(executable: &str) -> bool {
@@ -215,14 +235,39 @@ mod tests {
     }
 
     #[test]
-    fn command_parts_for_known_harnesses_append_prompt() -> anyhow::Result<()> {
+    fn command_parts_for_known_harnesses_append_interactive_prompt() -> anyhow::Result<()> {
         assert_eq!(
-            command_parts_for_harness("codex", "fix tests")?,
+            command_parts_for_harness("codex", "fix tests", HarnessLaunchMode::Interactive)?,
             ("codex", vec!["fix tests".to_string()])
         );
         assert_eq!(
-            command_parts_for_harness("claude", "polish ui")?,
+            command_parts_for_harness("claude", "polish ui", HarnessLaunchMode::Interactive)?,
             ("claude", vec!["polish ui".to_string()])
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn command_parts_for_known_harnesses_use_noninteractive_entrypoints() -> anyhow::Result<()> {
+        assert_eq!(
+            command_parts_for_harness("codex", "fix tests", HarnessLaunchMode::NonInteractive)?,
+            (
+                "codex",
+                vec![
+                    "exec".to_string(),
+                    "--skip-git-repo-check".to_string(),
+                    "--color".to_string(),
+                    "never".to_string(),
+                    "fix tests".to_string(),
+                ]
+            )
+        );
+        assert_eq!(
+            command_parts_for_harness("claude", "polish ui", HarnessLaunchMode::NonInteractive)?,
+            (
+                "claude",
+                vec!["--print".to_string(), "polish ui".to_string()]
+            )
         );
         Ok(())
     }
@@ -233,22 +278,29 @@ mod tests {
             id: "future",
             label: "Future Harness",
             executable: "future",
-            prompt_prefix_args: &["chat", "-q"],
+            interactive_prompt_prefix_args: &["chat"],
+            non_interactive_prompt_prefix_args: &["exec", "-q"],
             install_hint: "Install the future harness.",
         };
 
         assert_eq!(
-            spec.prompt_args("hello"),
-            vec!["chat".to_string(), "-q".to_string(), "hello".to_string()]
+            spec.prompt_args("hello", HarnessLaunchMode::Interactive),
+            vec!["chat".to_string(), "hello".to_string()]
+        );
+        assert_eq!(
+            spec.prompt_args("hello", HarnessLaunchMode::NonInteractive),
+            vec!["exec".to_string(), "-q".to_string(), "hello".to_string()]
         );
     }
 
     #[test]
     fn command_parts_reject_unknown_harnesses() {
-        assert!(command_parts_for_harness("hermes", "hello")
-            .unwrap_err()
-            .to_string()
-            .contains("unsupported harness"));
+        assert!(
+            command_parts_for_harness("hermes", "hello", HarnessLaunchMode::Interactive)
+                .unwrap_err()
+                .to_string()
+                .contains("unsupported harness")
+        );
     }
 
     #[cfg(unix)]

@@ -603,8 +603,12 @@ fn launch_patch_session(request: &patch::PatchOpenClawRequest) -> Result<String>
         None,
         &current_timestamp(),
     )?;
-    let command =
-        pty_runner::build_harness_command(selected_harness.id, &brief, &request.repo.root)?;
+    let command = pty_runner::build_harness_command(
+        selected_harness.id,
+        &brief,
+        &request.repo.root,
+        harness_launch_mode_for_stdio(),
+    )?;
     let result = pty_runner::run_attached(&command)?;
     store::update_session_status(
         &conn,
@@ -661,6 +665,14 @@ fn run_daemon_command(command: DaemonCommand) -> Result<()> {
     Ok(())
 }
 
+fn harness_launch_mode_for_stdio() -> harness::HarnessLaunchMode {
+    if io::stdin().is_terminal() && io::stdout().is_terminal() {
+        harness::HarnessLaunchMode::Interactive
+    } else {
+        harness::HarnessLaunchMode::NonInteractive
+    }
+}
+
 fn run_session(
     harness_id: &str,
     prompt_args: &[String],
@@ -714,7 +726,12 @@ fn run_session(
         &current_timestamp(),
     )?;
 
-    let command = pty_runner::build_harness_command(selected_harness.id, &prompt, &cwd)?;
+    let command = pty_runner::build_harness_command(
+        selected_harness.id,
+        &prompt,
+        &cwd,
+        harness_launch_mode_for_stdio(),
+    )?;
     match pty_runner::run_attached(&command) {
         Ok(result) => {
             store::update_session_status(

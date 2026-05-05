@@ -52,8 +52,13 @@ impl HarnessCommand {
     }
 }
 
-pub fn build_harness_command(harness_id: &str, prompt: &str, cwd: &Path) -> Result<HarnessCommand> {
-    let (program, args) = crate::harness::command_parts_for_harness(harness_id, prompt)?;
+pub fn build_harness_command(
+    harness_id: &str,
+    prompt: &str,
+    cwd: &Path,
+    mode: crate::harness::HarnessLaunchMode,
+) -> Result<HarnessCommand> {
+    let (program, args) = crate::harness::command_parts_for_harness(harness_id, prompt, mode)?;
 
     Ok(HarnessCommand {
         program: program.to_string(),
@@ -247,7 +252,13 @@ mod tests {
     #[test]
     fn builds_codex_command_without_shell_interpolation() {
         let cwd = Path::new("/tmp/coven project");
-        let command = build_harness_command("codex", "hello; rm -rf /", cwd).unwrap();
+        let command = build_harness_command(
+            "codex",
+            "hello; rm -rf /",
+            cwd,
+            crate::harness::HarnessLaunchMode::Interactive,
+        )
+        .unwrap();
 
         assert_eq!(command.program(), "codex");
         assert_eq!(command.args(), &["hello; rm -rf /"]);
@@ -290,7 +301,13 @@ mod tests {
     #[test]
     fn builds_claude_command_without_shell_interpolation() {
         let cwd = Path::new("/tmp/coven-project");
-        let command = build_harness_command("claude", "explain && exit", cwd).unwrap();
+        let command = build_harness_command(
+            "claude",
+            "explain && exit",
+            cwd,
+            crate::harness::HarnessLaunchMode::Interactive,
+        )
+        .unwrap();
 
         assert_eq!(command.program(), "claude");
         assert_eq!(command.args(), &["explain && exit"]);
