@@ -6,11 +6,21 @@ Coven's Rust layer is the local authority boundary. It owns process launch, proj
 
 TypeScript clients are integration layers. They may validate inputs for better UX, but Rust must revalidate every launch, input, kill, and path-sensitive request before acting.
 
-```text
-CLI      -> Rust CLI/daemon                  -> harness PTY
-comux    -> local Coven socket               -> Rust daemon -> harness PTY
-OpenClaw -> external @opencoven/coven plugin -> local Coven socket -> Rust daemon -> harness PTY
+```mermaid
+flowchart LR
+  CLI[coven CLI / TUI] --> Rust[local Rust CLI/daemon]
+  Comux[comux cockpit] --> Socket[HTTP over Unix socket]
+  OpenClaw[OpenClaw] --> Plugin[external @opencoven/coven plugin]
+  Plugin --> Socket
+  Socket --> Rust
+  Rust --> Guard[project-root + cwd guard]
+  Guard --> Router[harness adapter router]
+  Router --> Codex[Codex PTY]
+  Router --> Claude[Claude Code PTY]
+  Rust --> Store[(SQLite session ledger + events)]
 ```
+
+See [Architecture diagrams](ARCHITECTURE.md) for the fuller runtime topology and lifecycle diagrams.
 
 OpenClaw core does not include OpenCoven or Coven. The OpenClaw integration lives outside the OpenClaw repo as the ClawHub package `@opencoven/coven`, sourced from `packages/openclaw-coven` in this repo. That package is an opt-in compatibility adapter, not part of the Coven trust root.
 
@@ -32,12 +42,14 @@ The Rust CLI/daemon should stay narrow and boring:
 
 - `coven doctor` detects supported local harnesses.
 - `coven run` and `POST /sessions` launch only known harness ids.
+- `coven sessions` opens the interactive session browser in terminals and prints table output for scripts/pipes.
 - `coven attach` replays and follows Coven-managed event output.
+- `coven archive`, `coven summon`, and `coven sacrifice --yes` manage completed session history without making users memorize ids in the TUI path.
 - `coven daemon start/status/stop` manages one local daemon state directory.
 - The daemon exposes a small local API over `<covenHome>/coven.sock`.
-- SQLite stores session metadata and append-only event history.
+- SQLite stores session metadata, archive state, and append-only event history.
 
-The local API should remain stable and intentionally small:
+The local API should remain stable and intentionally small. Archive/summon/sacrifice are currently CLI/store rituals; live runtime control remains on the socket API:
 
 - `GET /health`
 - `GET /sessions`

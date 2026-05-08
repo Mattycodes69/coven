@@ -20,7 +20,7 @@ It lets a user bring whatever coding harness they already trust — Codex, Claud
 
 > One project. Any harness. Visible work.
 
-**OpenSorcery phrasing:**
+**OpenCoven phrasing:**
 
 > Bring any familiar into the circle.
 
@@ -60,6 +60,7 @@ pnpm dlx @opencoven/cli run claude "polish the landing page"
 coven run codex "fix tests"
 coven run claude "polish the landing page"
 coven sessions
+coven sessions --plain
 coven attach <session-id>
 ```
 
@@ -74,7 +75,7 @@ coven attach <session-id>
 - Built-in Codex adapter.
 - Built-in Claude Code adapter.
 - Strict explicit project-root boundary.
-- Session list / attach / kill.
+- Session list, human browser, attach/rejoin/view-log flows, archive/summon/sacrifice rituals, and daemon kill API for live sessions.
 - Local event log and session metadata.
 - Minimal local API for comux and external plugin integration.
 - Npm-first distribution wrapper with native binary.
@@ -111,9 +112,9 @@ coven run claude "polish this UI"
 ```
 
 2. Both commands create supervised interactive PTY sessions.
-3. `coven sessions` shows active and completed sessions.
-4. `coven attach <session-id>` reconnects to live PTY output/input.
-5. `coven kill <session-id>` stops a live session cleanly.
+3. `coven sessions` shows active and completed sessions, opening the interactive browser in terminals and plain output when piped.
+4. `coven attach <session-id>` reconnects to live PTY output/input, while the browser exposes **Rejoin** / **View Log** without making users copy ids.
+5. The daemon `POST /sessions/:id/kill` API stops a live session cleanly; the CLI keeps destructive history cleanup behind `coven sacrifice <session-id> --yes`.
 6. Session metadata and event logs survive daemon restart.
 7. Coven refuses to run a session outside the explicitly selected project root.
 8. comux can query sessions through the local API and show them as external/Coven-managed panes.
@@ -402,7 +403,7 @@ Rules:
 ### MVP distribution
 
 - Public GitHub repo.
-- Public npm package `@opencoven/cli` when the wrapper is ready.
+- Public npm package `@opencoven/cli` with platform packages for macOS Apple Silicon and Linux x64.
 - Package exposes binary command `coven`.
 - Rust binary is built in CI and bundled/downloaded by npm wrapper.
 
@@ -512,7 +513,7 @@ Exit criteria:
 - `coven run claude "..."` starts an attachable PTY session.
 - `coven attach <id>` works.
 - `coven sessions` shows status.
-- `coven kill <id>` works.
+- Live session kill works through the daemon API, and CLI history cleanup uses guarded `coven sacrifice <id> --yes`.
 - Missing harness produces an actionable install hint.
 
 ### Phase 4: Persistence and local API

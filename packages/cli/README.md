@@ -34,10 +34,10 @@ coven archive <session-id>
 coven sacrifice <session-id> --yes
 ```
 
-In a terminal, `coven sessions` opens the human session browser so you can select work and choose Attach/Summon/Archive/Sacrifice without copying IDs. Use `coven sessions --plain` for scripts or table output.
+In a terminal, `coven sessions` opens the human session browser so you can select work and choose **Rejoin**, **View Log**, **Summon**, **Archive**, or **Sacrifice** without copying IDs. Use `coven sessions --plain` for scripts or table output.
 
 Session rituals use Coven language while staying safe: archive hides old work without deleting it, summon restores archived work, and sacrifice permanently deletes only after explicit `--yes` confirmation.
 
 ## Status
 
-This wrapper is part of the early MVP package shape. Stable distribution depends on the native binary release flow being ready.
+This wrapper is live for early adopters. The current published npm latest is `0.0.10` for `@opencoven/cli`, `@opencoven/cli-macos`, and `@opencoven/cli-linux-x64`. Coven itself is still an early local-first MVP, so command/API compatibility should be tracked in the repo docs and release notes.

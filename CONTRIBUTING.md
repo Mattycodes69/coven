@@ -65,7 +65,7 @@ OpenCoven docs should be public, direct, and concrete:
 - Say **OpenCoven** for the ecosystem/org and **Coven** for the CLI/daemon product.
 - Keep the terminal command as `coven`; do not tell users to run `opencoven` or `@opencoven` as a command.
 - Use the canonical community references: `discord.gg/opencoven` and `@OpenCvn`.
-- Do not imply stable package availability until the package/release path is ready.
+- Be precise about package status: npm packages are published for early adopters, but Coven remains an early local-first MVP.
 - Keep VMUX/comux comparisons high-level: Coven is the runtime substrate, comux is the cockpit, VMUX is not required to understand Coven.
 
 ## Pull Request Workflow

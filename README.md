@@ -23,22 +23,25 @@
 
 ## Install
 
-Coven is an early MVP. The public package shape is here, but stable installation is not the primary promise yet.
+Coven is still an early local-first MVP, but the npm wrapper is live for supported platforms. The user-facing command is always `coven`.
 
-From a checkout today:
+Try the published package:
+
+```sh
+npx @opencoven/cli doctor
+pnpm dlx @opencoven/cli doctor
+```
+
+Or build from source:
 
 ```sh
 git clone https://github.com/OpenCoven/coven.git
 cd coven
 cargo build --workspace
+cargo run -p coven-cli -- doctor
 ```
 
-The user-facing command is always `coven`. Once the npm wrapper is ready, the package path is:
-
-```sh
-npm exec @opencoven/cli -- doctor
-pnpm dlx @opencoven/cli doctor
-```
+Current npm package latest: `0.0.10` for `@opencoven/cli`, `@opencoven/cli-macos`, and `@opencoven/cli-linux-x64`.
 
 ## Quick Start
 
@@ -65,7 +68,7 @@ coven sessions --all
 coven sessions --plain
 ```
 
-`coven doctor` checks whether supported local harness CLIs are available. `coven run` creates a project-scoped session record, validates the working directory, and launches the selected harness through Coven-managed PTY execution. In a terminal, `coven sessions` opens a human session browser where you can select work and choose actions without copying IDs; use `--plain` for scripts or table output.
+`coven doctor` checks whether supported local harness CLIs are available. `coven run` creates a project-scoped session record, validates the working directory, and launches the selected harness through Coven-managed PTY execution. In a terminal, `coven sessions` opens a human session browser where you can select work and choose visible actions like **Rejoin**, **View Log**, **Summon**, **Archive**, and **Sacrifice** without copying IDs; use `--plain` for scripts or table output.
 
 Coven also provides a rescue loop for OpenClaw contributors and users:
 
@@ -81,7 +84,8 @@ Coven is the local harness substrate for OpenCoven. It does not replace your cod
 
 - **Project-root boundaries** — every launch is tied to an explicit repository/project root.
 - **Harness-neutral runtime** — v0 focuses on Codex and Claude Code, with a clean adapter path for future harnesses.
-- **Attachable PTY sessions** — live work can be listed and reattached from the CLI.
+- **Human session browser** — live and completed work can be selected, rejoined, viewed, archived, restored, or sacrificed without memorizing ids.
+- **Attachable PTY sessions** — live work can still be replayed/followed from explicit CLI verbs.
 - **Local daemon API** — comux, OpenMeow, and the external OpenClaw plugin can coordinate through the same socket contract.
 - **SQLite-backed history** — session metadata and event logs survive daemon restarts.
 - **Rust authority layer** — launch, cwd, input, kill, and path-sensitive requests are revalidated in Rust.
@@ -149,6 +153,7 @@ Coven is the room where harnesses run. The clients decide how to present and rou
 ## Documentation
 
 - [Product spec](docs/PRODUCT-SPEC.md)
+- [Architecture diagrams](docs/ARCHITECTURE.md)
 - [Operational model](docs/OPERATIONAL-MODEL.md)
 - [MVP plan](docs/MVP-PLAN.md)
 - [Future harnesses](docs/FUTURE-HARNESSES.md)

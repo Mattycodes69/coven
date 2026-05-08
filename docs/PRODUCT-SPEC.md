@@ -15,7 +15,7 @@ The MVP proves the core runtime loop:
 - Explicit project-root boundaries
 - Interactive PTY session execution
 - Session metadata and event persistence
-- Commands for running, listing, attaching to, and killing sessions
+- Commands and TUI flows for running, browsing, rejoining, viewing, archiving, summoning, sacrificing, and killing live sessions through the daemon API
 - A minimal local API for first-party clients
 - An external OpenClaw plugin package that consumes that API without entering OpenClaw core
 - Public distribution and documentation for early adopters
@@ -26,16 +26,38 @@ Out of scope for MVP: marketplace plugins, cloud sync, multi-user collaboration,
 
 Coven v0 should ship with built-in adapters for Codex and Claude Code. These adapters should detect local CLI availability, construct commands without shell interpolation where possible, run the harness inside a validated project `cwd`, and expose output/input through Coven-managed PTY sessions.
 
-Terminal UX should stay centered on the lightweight `coven` command:
+Terminal UX should stay centered on the lightweight `coven` command and a human session browser:
 
 ```sh
+coven
+coven tui
 coven run codex "fix tests"
 coven run claude "polish this UI"
+coven sessions
+coven sessions --plain
 ```
+
+In an interactive terminal, `coven sessions` opens a browser with readable actions such as **Rejoin**, **View Log**, **Summon**, **Archive**, and **Sacrifice** so users do not have to memorize session ids. Plain output remains available for scripts and pipes.
 
 ## Future Hermes and adapter path
 
 Hermes and other harnesses should arrive through a small adapter contract after the built-in v0 path is stable. The adapter model should support future targets such as Hermes, Aider, Gemini, OpenCode, and custom command adapters without requiring Coven to become a full plugin marketplace in the MVP.
+
+## Current architecture
+
+```mermaid
+flowchart LR
+  User[Developer] --> CLI[coven CLI / TUI]
+  CLI --> Daemon[Coven Rust daemon]
+  Comux[comux] --> Daemon
+  OpenClaw[OpenClaw] --> Plugin[external @opencoven/coven plugin]
+  Plugin --> Daemon
+  Daemon --> Store[(SQLite session ledger)]
+  Daemon --> Router[Codex / Claude adapter router]
+  Router --> PTY[Harness PTYs]
+```
+
+For fuller diagrams, see [Architecture diagrams](ARCHITECTURE.md).
 
 ## Relationship to comux, OpenClaw, and OpenMeow
 
