@@ -69,7 +69,7 @@ pub fn built_in_harness_specs() -> Vec<HarnessCommandSpec> {
                 "--color",
                 "never",
             ],
-            install_hint: "Install or authenticate the Codex CLI, then retry `coven doctor`.",
+            install_hint: "Install Codex with `npm install -g @openai/codex` or `brew install --cask codex`; if it is already installed, make sure `codex` is on PATH and run `codex login` or `codex` once to authenticate, then retry `coven doctor`.",
         },
         HarnessCommandSpec {
             id: "claude",
@@ -77,7 +77,7 @@ pub fn built_in_harness_specs() -> Vec<HarnessCommandSpec> {
             executable: "claude",
             interactive_prompt_prefix_args: &[],
             non_interactive_prompt_prefix_args: &["--print"],
-            install_hint: "Install or authenticate Claude Code, then retry `coven doctor`.",
+            install_hint: "Install Claude Code with `npm install -g @anthropic-ai/claude-code`; if it is already installed, make sure `claude` is on PATH and run `claude doctor` to finish local auth/setup, then retry `coven doctor`.",
         },
     ]
 }
@@ -232,6 +232,31 @@ mod tests {
         assert_eq!(harnesses[1].id, "claude");
         assert_eq!(harnesses[1].label, "Claude Code");
         assert_eq!(harnesses[1].executable, "claude");
+    }
+
+    #[test]
+    fn built_in_harnesses_include_first_run_recovery_commands() {
+        let harnesses = built_in_harnesses();
+        let codex = harnesses
+            .iter()
+            .find(|harness| harness.id == "codex")
+            .expect("codex harness should exist");
+        let claude = harnesses
+            .iter()
+            .find(|harness| harness.id == "claude")
+            .expect("claude harness should exist");
+
+        assert!(codex.install_hint.contains("npm install -g @openai/codex"));
+        assert!(codex.install_hint.contains("brew install --cask codex"));
+        assert!(codex.install_hint.contains("codex"));
+        assert!(codex.install_hint.contains("PATH"));
+
+        assert!(claude
+            .install_hint
+            .contains("npm install -g @anthropic-ai/claude-code"));
+        assert!(claude.install_hint.contains("claude doctor"));
+        assert!(claude.install_hint.contains("claude"));
+        assert!(claude.install_hint.contains("PATH"));
     }
 
     #[test]

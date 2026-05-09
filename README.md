@@ -145,6 +145,17 @@ Current stable contract: [`docs/API-CONTRACT.md`](docs/API-CONTRACT.md). `GET /a
   - [Claude Code](https://docs.anthropic.com/en/docs/claude-code)
 - Node.js 18+ only for npm wrapper/plugin package development
 
+If `coven doctor` reports a missing harness, install or expose one CLI on `PATH`, run the harness once to finish local authentication/setup, then retry `coven doctor`:
+
+```sh
+npm install -g @openai/codex
+# or: brew install --cask codex
+codex login
+
+npm install -g @anthropic-ai/claude-code
+claude doctor
+```
+
 ## OpenCoven integrations
 
 - **comux** is the visual cockpit for agent panes and can consume Coven-managed sessions through the local API.

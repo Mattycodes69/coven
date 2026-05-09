@@ -48,6 +48,7 @@ Shipped:
 - Local HTTP-over-Unix-socket API for clients.
 - Versioned `v1` daemon API contract for external clients.
 - Compatibility tests for the external OpenClaw bridge against versioned daemon responses.
+- First-run recovery hints for missing Codex or Claude Code CLIs.
 - Published npm wrapper packages:
   - `@opencoven/cli`
   - `@opencoven/cli-macos`
@@ -58,7 +59,6 @@ Shipped:
 Now:
 
 - Keep the versioned daemon API contract and external-client compatibility work aligned. See [`docs/API-CONTRACT.md`](API-CONTRACT.md).
-- Improve first-run onboarding and failure recovery for missing harness CLIs.
 - Keep the public docs aligned with the actual CLI/API surface.
 
 Next:
