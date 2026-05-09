@@ -152,6 +152,7 @@ Coven is the room where harnesses run. The clients decide how to present and rou
 
 ## Documentation
 
+- [Public roadmap](docs/ROADMAP.md)
 - [Product spec](docs/PRODUCT-SPEC.md)
 - [Architecture diagrams](docs/ARCHITECTURE.md)
 - [Operational model](docs/OPERATIONAL-MODEL.md)
