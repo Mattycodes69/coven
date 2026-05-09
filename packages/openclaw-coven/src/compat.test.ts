@@ -251,7 +251,7 @@ describe("Coven daemon API compatibility — v2026.4", () => {
         (req, res) => {
           // Verify the client posts to the correct input path
           expect(req.url).toBe(
-            "/sessions/550e8400-e29b-41d4-a716-446655440001/input",
+            "/api/v1/sessions/550e8400-e29b-41d4-a716-446655440001/input",
           );
           let body = "";
           req.on("data", (chunk: string) => {
@@ -281,7 +281,7 @@ describe("Coven daemon API compatibility — v2026.4", () => {
         (req, res) => {
           // Verify the client posts to the correct kill path
           expect(req.url).toBe(
-            "/sessions/550e8400-e29b-41d4-a716-446655440001/kill",
+            "/api/v1/sessions/550e8400-e29b-41d4-a716-446655440001/kill",
           );
           res.statusCode = 202;
           res.setHeader("Content-Type", "application/json");

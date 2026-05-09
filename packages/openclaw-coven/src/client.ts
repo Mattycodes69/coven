@@ -24,8 +24,9 @@ export type CovenEventRecord = {
 };
 
 export type CovenHealthResponse = {
-  ok: boolean;
   apiVersion: string;
+  supportedApiVersions: string[];
+  ok: boolean;
   daemon?: {
     pid: number;
     startedAt: string;
@@ -94,6 +95,8 @@ export class CovenApiError extends Error {
   }
 }
 
+const COVEN_API_VERSION = "v1";
+const COVEN_API_BASE_PATH = `/api/${COVEN_API_VERSION}`;
 const DEFAULT_REQUEST_TIMEOUT_MS = 10_000;
 const MAX_REQUEST_BYTES = 1_000_000;
 const MAX_RESPONSE_BYTES = 1_000_000;
@@ -397,6 +400,23 @@ function requireNullableNumberField(
   return value;
 }
 
+function normalizeHealthResponse(value: unknown): CovenHealthResponse {
+  const record = requireRecord(value, "Coven health");
+  if (record.apiVersion !== COVEN_API_VERSION) {
+    throw new Error(`Coven API version is unsupported: ${String(record.apiVersion)}`);
+  }
+  if (
+    !Array.isArray(record.supportedApiVersions) ||
+    !record.supportedApiVersions.includes(COVEN_API_VERSION)
+  ) {
+    throw new Error("Coven API supportedApiVersions is invalid");
+  }
+  if (typeof record.ok !== "boolean") {
+    throw new Error("Coven response field ok is invalid");
+  }
+  return record as CovenHealthResponse;
+}
+
 function normalizeSessionRecord(value: unknown): CovenSessionRecord {
   const record = requireRecord(value, "Coven session");
   return {
@@ -435,20 +455,20 @@ export function createCovenClient(
 ): CovenClient {
   return {
     health(signal) {
-      return requestJson<CovenHealthResponse>({
+      return requestJson<unknown>({
         socketPath,
         socketRoot: clientOptions.socketRoot,
         method: "GET",
-        path: "/health",
+        path: `${COVEN_API_BASE_PATH}/health`,
         signal,
-      });
+      }).then(normalizeHealthResponse);
     },
     launchSession(input, signal) {
       return requestJson<unknown>({
         socketPath,
         socketRoot: clientOptions.socketRoot,
         method: "POST",
-        path: "/sessions",
+        path: `${COVEN_API_BASE_PATH}/sessions`,
         body: input,
         signal,
       }).then(normalizeSessionRecord);
@@ -458,7 +478,7 @@ export function createCovenClient(
         socketPath,
         socketRoot: clientOptions.socketRoot,
         method: "GET",
-        path: `/sessions/${encodeURIComponent(sessionId)}`,
+        path: `${COVEN_API_BASE_PATH}/sessions/${encodeURIComponent(sessionId)}`,
         signal,
       }).then(normalizeSessionRecord);
     },
@@ -474,7 +494,7 @@ export function createCovenClient(
         socketPath,
         socketRoot: clientOptions.socketRoot,
         method: "GET",
-        path: `/events?${params.toString()}`,
+        path: `${COVEN_API_BASE_PATH}/events?${params.toString()}`,
         signal,
       }).then(normalizeEventRecords);
     },
@@ -483,7 +503,7 @@ export function createCovenClient(
         socketPath,
         socketRoot: clientOptions.socketRoot,
         method: "POST",
-        path: `/sessions/${encodeURIComponent(sessionId)}/input`,
+        path: `${COVEN_API_BASE_PATH}/sessions/${encodeURIComponent(sessionId)}/input`,
         body: { data },
         signal,
       });
@@ -493,7 +513,7 @@ export function createCovenClient(
         socketPath,
         socketRoot: clientOptions.socketRoot,
         method: "POST",
-        path: `/sessions/${encodeURIComponent(sessionId)}/kill`,
+        path: `${COVEN_API_BASE_PATH}/sessions/${encodeURIComponent(sessionId)}/kill`,
         signal,
       });
     },
@@ -503,5 +523,6 @@ export function createCovenClient(
 export const __testing = {
   validateSocketPathForUse,
   normalizeEventRecord,
+  normalizeHealthResponse,
   normalizeSessionRecord,
 };

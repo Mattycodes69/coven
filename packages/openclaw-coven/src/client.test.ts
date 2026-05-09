@@ -39,14 +39,23 @@ async function withServer(
 describe("createCovenClient", () => {
   it("parses daemon JSON over a Unix socket", async () => {
     await withServer(
-      (_req, res) => {
+      (req, res) => {
+        expect(req.url).toBe("/api/v1/health");
         res.setHeader("Content-Type", "application/json");
-        res.end(JSON.stringify({ ok: true, apiVersion: "v1", daemon: null }));
+        res.end(
+          JSON.stringify({
+            apiVersion: "v1",
+            supportedApiVersions: ["v1"],
+            ok: true,
+            daemon: null,
+          }),
+        );
       },
       async (socketPath) => {
         await expect(createCovenClient(socketPath).health()).resolves.toEqual({
-          ok: true,
           apiVersion: "v1",
+          supportedApiVersions: ["v1"],
+          ok: true,
           daemon: null,
         });
       },
@@ -57,24 +66,32 @@ describe("createCovenClient", () => {
     await withServer(
       (_req, res) => {
         res.setHeader("Content-Type", "application/json");
-        res.end(JSON.stringify({ ok: true, apiVersion: "v1", daemon: null }));
+        res.end(
+          JSON.stringify({
+            apiVersion: "v1",
+            supportedApiVersions: ["v1"],
+            ok: true,
+            daemon: null,
+          }),
+        );
       },
       async (socketPath) => {
         await expect(
           createCovenClient(socketPath, { socketRoot: tmpDir }).health(),
         ).resolves.toEqual({
-          ok: true,
           apiVersion: "v1",
+          supportedApiVersions: ["v1"],
+          ok: true,
           daemon: null,
         });
       },
     );
   });
 
-  it("sends the event cursor when listing events", async () => {
+  it("sends the event cursor through the versioned API path when listing events", async () => {
     await withServer(
       (req, res) => {
-        expect(req.url).toBe("/events?sessionId=session-1&afterEventId=event-1");
+        expect(req.url).toBe("/api/v1/events?sessionId=session-1&afterEventId=event-1");
         res.setHeader("Content-Type", "application/json");
         res.end("[]");
       },

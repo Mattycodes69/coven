@@ -41,7 +41,7 @@ OpenClaw core does not include OpenCoven or Coven. The OpenClaw integration live
 The Rust CLI/daemon should stay narrow and boring:
 
 - `coven doctor` detects supported local harnesses.
-- `coven run` and `POST /sessions` launch only known harness ids.
+- `coven run` and `POST /api/v1/sessions` launch only known harness ids.
 - `coven sessions` opens the interactive session browser in terminals and prints table output for scripts/pipes.
 - `coven attach` replays and follows Coven-managed event output.
 - `coven archive`, `coven summon`, and `coven sacrifice --yes` manage completed session history without making users memorize ids in the TUI path.
@@ -49,15 +49,18 @@ The Rust CLI/daemon should stay narrow and boring:
 - The daemon exposes a small local API over `<covenHome>/coven.sock`.
 - SQLite stores session metadata, archive state, and append-only event history.
 
-The local API should remain stable and intentionally small. Archive/summon/sacrifice are currently CLI/store rituals; live runtime control remains on the socket API:
+The local API should remain stable and intentionally small. The current public contract is `v1`; new clients should use `/api/v1/...` routes. Archive/summon/sacrifice are currently CLI/store rituals; live runtime control remains on the socket API:
 
-- `GET /health`
-- `GET /sessions`
-- `POST /sessions`
-- `GET /sessions/:id`
-- `GET /events?sessionId=...`
-- `POST /sessions/:id/input`
-- `POST /sessions/:id/kill`
+- `GET /api/v1/api-version`
+- `GET /api/v1/health`
+- `GET /api/v1/sessions`
+- `POST /api/v1/sessions`
+- `GET /api/v1/sessions/:id`
+- `GET /api/v1/events?sessionId=...`
+- `POST /api/v1/sessions/:id/input`
+- `POST /api/v1/sessions/:id/kill`
+
+Legacy unversioned routes remain as early-MVP aliases, but external clients should treat `v1` as the compatibility boundary.
 
 ## Client Responsibilities
 
@@ -73,7 +76,7 @@ The plugin:
 
 - registers an optional ACP backend named `coven`;
 - validates plugin configuration and the local socket trust anchor;
-- launches sessions through `POST /sessions`;
+- launches sessions through `POST /api/v1/sessions`;
 - polls Coven events and maps them into ACP runtime events;
 - maps only Codex and Claude Code agent ids by default for v0;
 - uses fallback ACP backends only when explicitly configured.
@@ -88,10 +91,11 @@ The npm wrapper should only resolve and execute the native `coven` binary. It sh
 
 Externalization makes the socket API a product contract. Add compatibility protections before broad distribution:
 
-- keep `apiVersion` in `GET /health` as the contract handshake for clients;
-- add `covenVersion` in `GET /health` only if clients need daemon build identity distinct from contract version;
+- include `apiVersion` and supported API versions in `GET /api/v1/health`;
+- keep legacy `GET /health` available as an early-MVP alias while new clients move to `/api/v1`;
+- add `covenVersion` in `GET /api/v1/health` only if clients need daemon build identity distinct from contract version;
 - use structured error codes for API failures;
-- paginate `GET /events` with a daemon-enforced limit;
+- paginate `GET /api/v1/events` with a daemon-enforced limit;
 - keep unknown fields ignored where safe and unknown required behavior rejected;
 - add plugin tests against representative daemon responses;
 - document breaking API changes in the Coven repo before updating the plugin.

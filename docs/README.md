@@ -7,6 +7,7 @@ This directory holds the product and architecture notes for Coven, the OpenCoven
 - [Public roadmap](ROADMAP.md) — community-facing progress snapshot across Coven, comux, and integrations.
 - [Product spec](PRODUCT-SPEC.md) — what Coven is and what belongs in MVP.
 - [Architecture diagrams](ARCHITECTURE.md) — runtime topology, session lifecycle, and authority boundary diagrams.
+- [Local API](API.md) — versioned Unix-socket API contract for comux, OpenClaw, and other clients.
 - [Operational model](OPERATIONAL-MODEL.md) — authority boundaries between Rust, comux, OpenClaw, and npm wrappers.
 - [MVP plan](MVP-PLAN.md) — implementation plan and success criteria.
 - [Future harnesses](FUTURE-HARNESSES.md) — adapter direction after Codex and Claude Code.

@@ -114,7 +114,7 @@ coven run claude "polish this UI"
 2. Both commands create supervised interactive PTY sessions.
 3. `coven sessions` shows active and completed sessions, opening the interactive browser in terminals and plain output when piped.
 4. `coven attach <session-id>` reconnects to live PTY output/input, while the browser exposes **Rejoin** / **View Log** without making users copy ids.
-5. The daemon `POST /sessions/:id/kill` API stops a live session cleanly; the CLI keeps destructive history cleanup behind `coven sacrifice <session-id> --yes`.
+5. The daemon `POST /api/v1/sessions/:id/kill` API stops a live session cleanly; the CLI keeps destructive history cleanup behind `coven sacrifice <session-id> --yes`.
 6. Session metadata and event logs survive daemon restart.
 7. Coven refuses to run a session outside the explicitly selected project root.
 8. comux can query sessions through the local API and show them as external/Coven-managed panes.
@@ -252,19 +252,22 @@ erDiagram
   }
 ```
 
-## 10. Local API v0
+## 10. Local API v1
 
 The local API should be boring and stable. It is now the contract between Rust and external clients, including comux and the `@opencoven/coven` OpenClaw plugin. Prefer the smallest local HTTP-over-Unix-socket surface that can be versioned, tested, and kept backward compatible.
 
 Implemented route surface:
 
-- `GET /health`
-- `GET /sessions`
-- `POST /sessions`
-- `GET /sessions/:id`
-- `GET /events?sessionId=...`
-- `POST /sessions/:id/input`
-- `POST /sessions/:id/kill`
+- `GET /api/v1/api-version`
+- `GET /api/v1/health`
+- `GET /api/v1/sessions`
+- `POST /api/v1/sessions`
+- `GET /api/v1/sessions/:id`
+- `GET /api/v1/events?sessionId=...`
+- `POST /api/v1/sessions/:id/input`
+- `POST /api/v1/sessions/:id/kill`
+
+Legacy unversioned routes remain as early-MVP aliases while clients move to `/api/v1`.
 
 Logical contract:
 
@@ -1302,12 +1305,12 @@ Before building a long-lived server, write a PID/status file under `~/.coven/dae
 
 Use Unix socket or localhost port. Required MVP endpoints:
 
-- `GET /health`
-- `GET /sessions`
-- `GET /sessions/:id`
-- `POST /sessions/:id/input`
-- `POST /sessions/:id/kill`
-- `GET /events?sessionId=<id>`
+- `GET /api/v1/health`
+- `GET /api/v1/sessions`
+- `GET /api/v1/sessions/:id`
+- `POST /api/v1/sessions/:id/input`
+- `POST /api/v1/sessions/:id/kill`
+- `GET /api/v1/events?sessionId=<id>`
 
 - [x] **Step 4: Verify daemon health**
 
@@ -1443,7 +1446,7 @@ The implementation spike proved the bridge is technically viable, but the OpenCl
 - OpenClaw PR: `openclaw/openclaw#72878` — closed/parked, not merged
 - External plugin package: `packages/openclaw-coven` in `OpenCoven/coven`
 - ClawHub package: `@opencoven/coven` latest `2026.4.27`
-- Core idea: an opt-in `coven` ACP runtime backend that checks Coven daemon health, launches with `POST /sessions`, maps output/exit events into ACP runtime events, and can fall back to `acpx` only when explicitly configured.
+- Core idea: an opt-in `coven` ACP runtime backend that checks Coven daemon health, launches with `POST /api/v1/sessions`, maps output/exit events into ACP runtime events, and can fall back to `acpx` only when explicitly configured.
 
 **Why externalized:**
 - Coven can continue maturing through direct CLI/daemon usage, comux, and an opt-in ClawHub plugin.
@@ -1459,7 +1462,7 @@ The implementation spike proved the bridge is technically viable, but the OpenCl
 - [x] **Spike: commit/push branch**
 - [x] **Externalize bridge as ClawHub package**
 - [x] **Confirm OpenClaw core does not carry Coven/OpenCoven code**
-- [ ] **Add explicit Coven API versioning for external clients**
+- [x] **Add explicit Coven API versioning for external clients**
 - [ ] **Add plugin compatibility tests against versioned daemon responses**
 
 ## 17. Progress tracking
@@ -1509,6 +1512,7 @@ Use a simple milestone board until the repo exists. Once created, mirror this in
 - [x] local API health
 - [x] sessions API
 - [x] events API
+- [x] versioned `v1` API contract
 
 ### Milestone 6: comux bridge
 

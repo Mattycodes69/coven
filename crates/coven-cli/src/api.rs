@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::{borrow::Cow, path::Path};
 
 use anyhow::{Context, Result};
 use chrono::{SecondsFormat, Utc};
@@ -8,13 +8,15 @@ use uuid::Uuid;
 
 use crate::{daemon::DaemonStatus, project, store};
 
-pub const API_VERSION: &str = "v1";
+pub const COVEN_API_VERSION: &str = "v1";
+pub const SUPPORTED_API_VERSIONS: [&str; 1] = [COVEN_API_VERSION];
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct HealthResponse {
+    pub api_version: String,
+    pub supported_api_versions: Vec<String>,
     pub ok: bool,
-    pub api_version: &'static str,
     pub daemon: Option<DaemonStatus>,
 }
 
@@ -59,8 +61,9 @@ impl SessionRuntime for NoopSessionRuntime {
 
 pub fn health_response(daemon: Option<DaemonStatus>) -> HealthResponse {
     HealthResponse {
+        api_version: COVEN_API_VERSION.to_string(),
+        supported_api_versions: SUPPORTED_API_VERSIONS.map(str::to_string).to_vec(),
         ok: true,
-        api_version: API_VERSION,
         daemon,
     }
 }
@@ -94,7 +97,28 @@ pub fn handle_request_with_runtime(
     runtime: &dyn SessionRuntime,
 ) -> Result<ApiResponse> {
     let (route, query) = split_path_query(path);
-    match (method, route) {
+    let route = match normalize_api_route(route) {
+        ApiRoute::Route(route) => route,
+        ApiRoute::Unsupported(version) => {
+            return json_response(
+                404,
+                &json!({
+                    "error": "unsupported API version",
+                    "apiVersion": version,
+                    "supportedApiVersions": SUPPORTED_API_VERSIONS,
+                }),
+            );
+        }
+        ApiRoute::Malformed => return json_response(404, &json!({ "error": "not found" })),
+    };
+    match (method, route.as_ref()) {
+        ("GET", "/api-version") => json_response(
+            200,
+            &json!({
+                "apiVersion": COVEN_API_VERSION,
+                "supportedApiVersions": SUPPORTED_API_VERSIONS,
+            }),
+        ),
         ("GET", "/health") => json_response(200, &health_response(daemon)),
         ("GET", "/sessions") => {
             let conn = store::open_store(&store_path(coven_home))?;
@@ -127,6 +151,28 @@ pub fn handle_request_with_runtime(
         }
         _ => json_response(404, &json!({ "error": "not found" })),
     }
+}
+
+enum ApiRoute<'a> {
+    Route(Cow<'a, str>),
+    Unsupported(String),
+    Malformed,
+}
+
+fn normalize_api_route(route: &str) -> ApiRoute<'_> {
+    let Some(rest) = route.strip_prefix("/api/") else {
+        return ApiRoute::Route(Cow::Borrowed(route));
+    };
+    let Some((version, suffix)) = rest.split_once('/') else {
+        return ApiRoute::Malformed;
+    };
+    if version != COVEN_API_VERSION {
+        return ApiRoute::Unsupported(version.to_string());
+    }
+    if suffix.is_empty() {
+        return ApiRoute::Malformed;
+    }
+    ApiRoute::Route(Cow::Owned(format!("/{suffix}")))
 }
 
 fn store_path(coven_home: &Path) -> std::path::PathBuf {
@@ -332,7 +378,7 @@ mod tests {
         let response = health_response(None);
 
         assert!(response.ok);
-        assert_eq!(response.api_version, API_VERSION);
+        assert_eq!(response.api_version, COVEN_API_VERSION);
         assert_eq!(response.daemon, None);
     }
 
@@ -356,6 +402,30 @@ mod tests {
         assert!(response.body.contains(r#""ok":true"#));
         assert!(response.body.contains(r#""apiVersion":"v1""#));
         assert!(response.body.contains(r#""pid":12345"#));
+        Ok(())
+    }
+
+    #[test]
+    fn routes_versioned_health_request_to_named_api_contract() -> anyhow::Result<()> {
+        let temp_dir = tempfile::tempdir()?;
+
+        let response = handle_request("GET", "/api/v1/health", temp_dir.path(), None)?;
+
+        assert_eq!(response.status, 200);
+        assert!(response.body.contains(r#""apiVersion":"v1""#));
+        assert!(response.body.contains(r#""supportedApiVersions":["v1"]"#));
+        assert!(response.body.contains(r#""ok":true"#));
+        Ok(())
+    }
+
+    #[test]
+    fn rejects_unknown_api_version_prefixes() -> anyhow::Result<()> {
+        let temp_dir = tempfile::tempdir()?;
+
+        let response = handle_request("GET", "/api/v2/health", temp_dir.path(), None)?;
+
+        assert_eq!(response.status, 404);
+        assert!(response.body.contains("unsupported API version"));
         Ok(())
     }
 

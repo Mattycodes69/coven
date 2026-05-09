@@ -118,21 +118,22 @@ Session rituals are intentionally explicit. **Archive** is reversible and keeps 
 
 ## Local API
 
-The daemon exposes a small HTTP API over a Unix socket for first-party and external clients:
+The daemon exposes a small versioned HTTP API over a Unix socket for first-party and external clients. The current public contract is **`v1`**; new clients should use the `/api/v1` prefix.
 
 | Endpoint | Purpose |
 |---|---|
-| `GET /health` | Check daemon health and metadata |
-| `GET /sessions` | List sessions |
-| `POST /sessions` | Launch a session |
-| `GET /sessions/:id` | Fetch one session |
-| `GET /events?sessionId=...` | Read session events |
-| `POST /sessions/:id/input` | Forward input to a live session |
-| `POST /sessions/:id/kill` | Kill a live session |
+| `GET /api/v1/api-version` | Read the active API version and supported versions |
+| `GET /api/v1/health` | Check daemon health and metadata |
+| `GET /api/v1/sessions` | List sessions |
+| `POST /api/v1/sessions` | Launch a session |
+| `GET /api/v1/sessions/:id` | Fetch one session |
+| `GET /api/v1/events?sessionId=...` | Read session events |
+| `POST /api/v1/sessions/:id/input` | Forward input to a live session |
+| `POST /api/v1/sessions/:id/kill` | Kill a live session |
 
-Treat the socket API as the product contract. Clients may validate for UX, but the Rust daemon remains the authority boundary.
+Treat the socket API as the product contract. Clients may validate for UX, but the Rust daemon remains the authority boundary. See [`docs/API.md`](docs/API.md) for compatibility rules.
 
-Current stable contract: [`docs/API-CONTRACT.md`](docs/API-CONTRACT.md). `GET /health` exposes `apiVersion: "v1"` for client handshakes.
+Current stable contract: [`docs/API-CONTRACT.md`](docs/API-CONTRACT.md). `GET /api/v1/health` exposes `apiVersion: "v1"` and `supportedApiVersions: ["v1"]` for client handshakes.
 
 ## Requirements
 

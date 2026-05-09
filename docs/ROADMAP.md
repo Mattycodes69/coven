@@ -46,6 +46,7 @@ Shipped:
 - Session browser and rituals: **Rejoin**, **View Log**, **Summon**, **Archive**, **Sacrifice**.
 - Scriptable and human session output: `coven sessions`, `--plain`, and `--all`.
 - Local HTTP-over-Unix-socket API for clients.
+- Versioned `v1` daemon API contract for external clients.
 - Published npm wrapper packages:
   - `@opencoven/cli`
   - `@opencoven/cli-macos`

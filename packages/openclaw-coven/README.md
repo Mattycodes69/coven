@@ -64,8 +64,8 @@ The plugin:
 
 1. Registers an ACP runtime backend named `coven`.
 2. Checks Coven daemon health through the configured Unix socket.
-3. Launches sessions with `POST /sessions`.
-4. Polls `/events?sessionId=...` for output and exit events.
+3. Launches sessions with `POST /api/v1/sessions`.
+4. Polls `/api/v1/events?sessionId=...` for output and exit events.
 5. Maps Coven events into OpenClaw ACP runtime events.
 6. Records the Coven session id on the ACP runtime handle.
 
@@ -88,15 +88,15 @@ The plugin is a client, not a trust root. The Rust daemon must still validate pr
 |---|---|---|
 | `@opencoven/coven@2026.4.28` | Coven 2026.4.x | Initial tested version pair. Fixture responses live in `src/fixtures/v2026.4/`. |
 
-The compatibility tests in `src/compat.test.ts` verify the plugin against the fixture files for the documented daemon API version. When the Rust daemon changes a response shape for `/health`, `/sessions`, or `/events`, update the matching fixture and re-run the tests.
+The compatibility tests in `src/compat.test.ts` verify the plugin against the fixture files for the documented daemon API version. When the Rust daemon changes a response shape for `/api/v1/health`, `/api/v1/sessions`, or `/api/v1/events`, update the matching fixture and re-run the tests.
 
 Fixture field names follow the Rust daemon's serialization rules:
-- `GET /health` — camelCase (`ok`, `daemon.pid`, `daemon.startedAt`, `daemon.socket`)
-- `GET /sessions`, `POST /sessions`, `GET /sessions/:id` — snake_case (`project_root`, `exit_code`, `created_at`, `updated_at`)
-- `GET /events` — snake_case (`session_id`, `payload_json`, `created_at`)
+- `GET /api/v1/health` — camelCase (`apiVersion`, `supportedApiVersions`, `ok`, `daemon.pid`, `daemon.startedAt`, `daemon.socket`)
+- `GET /api/v1/sessions`, `POST /api/v1/sessions`, `GET /api/v1/sessions/:id` — snake_case (`project_root`, `exit_code`, `created_at`, `updated_at`)
+- `GET /api/v1/events` — snake_case (`session_id`, `payload_json`, `created_at`)
 
 ## Development notes
 
 The source lives in the Coven repo so the bridge can mature with the Coven daemon/API. Do not add Coven or OpenCoven code back into OpenClaw core as part of normal plugin work.
 
-Because the plugin is externalized, the Coven socket API is a compatibility contract. Plugin changes should be tested against representative daemon responses, and daemon changes that affect `/health`, `/sessions`, `/events`, input, or kill behavior should update this package in the same repo.
+Because the plugin is externalized, the Coven socket API is a compatibility contract. The plugin uses the current `/api/v1` contract and verifies `GET /api/v1/health` before launching sessions. Plugin changes should be tested against representative daemon responses, and daemon changes that affect `/api/v1/health`, `/api/v1/sessions`, `/api/v1/events`, input, or kill behavior should update this package in the same repo.

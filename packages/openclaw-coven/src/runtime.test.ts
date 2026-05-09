@@ -67,7 +67,12 @@ function event(overrides: Partial<CovenEventRecord>): CovenEventRecord {
 
 function fakeClient(overrides: Partial<CovenClient> = {}): CovenClient {
   return {
-    health: vi.fn(async () => ({ ok: true, apiVersion: "v1", daemon: null })),
+    health: vi.fn(async () => ({
+      apiVersion: "v1",
+      supportedApiVersions: ["v1"],
+      ok: true,
+      daemon: null,
+    })),
     launchSession: vi.fn(async () => session()),
     getSession: vi.fn(async () => session({ status: "completed", exitCode: 0 })),
     listEvents: vi.fn(async () => [
@@ -932,7 +937,12 @@ describe("CovenAcpRuntime", () => {
     const runtime = new CovenAcpRuntime({
       config,
       client: fakeClient({
-        health: vi.fn(async () => ({ ok: true, apiVersion: "v2", daemon: null })),
+        health: vi.fn(async () => ({
+          ok: true,
+          apiVersion: "v2",
+          supportedApiVersions: ["v2"],
+          daemon: null,
+        })),
       }),
     });
 
@@ -975,7 +985,12 @@ describe("CovenAcpRuntime", () => {
     const runtime = new CovenAcpRuntime({
       config: { ...config, allowFallback: true },
       client: fakeClient({
-        health: vi.fn(async () => ({ ok: true, apiVersion: "v2", daemon: null })),
+        health: vi.fn(async () => ({
+          ok: true,
+          apiVersion: "v2",
+          supportedApiVersions: ["v2"],
+          daemon: null,
+        })),
         launchSession,
       }),
     });

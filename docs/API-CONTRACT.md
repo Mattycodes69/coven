@@ -4,17 +4,19 @@ The Coven daemon socket API is a public compatibility boundary for comux and ext
 
 ## Current stable version
 
-- `GET /health` exposes `apiVersion: "v1"`.
-- Clients should read `/health` before assuming any response shape from other endpoints.
+- `GET /api/v1/health` exposes `apiVersion: "v1"` and `supportedApiVersions: ["v1"]`.
+- Clients should read `/api/v1/health` before assuming any response shape from other endpoints.
+- Legacy unversioned routes such as `GET /health` remain early-MVP aliases; new clients should use `/api/v1`.
 
-## `GET /health`
+## `GET /api/v1/health`
 
-`GET /health` returns daemon reachability plus the contract version:
+`GET /api/v1/health` returns daemon reachability plus the contract version:
 
 ```json
 {
-  "ok": true,
   "apiVersion": "v1",
+  "supportedApiVersions": ["v1"],
+  "ok": true,
   "daemon": {
     "pid": 12345,
     "startedAt": "2026-05-09T06:43:00Z",
@@ -31,9 +33,9 @@ In `v1`, session responses stay as raw JSON objects using the Rust daemon's snak
 
 Endpoints that return this shape:
 
-- `GET /sessions` → `SessionRecord[]`
-- `POST /sessions` → `SessionRecord`
-- `GET /sessions/:id` → `SessionRecord`
+- `GET /api/v1/sessions` → `SessionRecord[]`
+- `POST /api/v1/sessions` → `SessionRecord`
+- `GET /api/v1/sessions/:id` → `SessionRecord`
 
 ```json
 {
@@ -51,7 +53,7 @@ Endpoints that return this shape:
 
 ## Event record shape (`v1`)
 
-`GET /events?sessionId=<id>` returns `EventRecord[]` with append-only event records:
+`GET /api/v1/events?sessionId=<id>` returns `EventRecord[]` with append-only event records:
 
 ```json
 [
@@ -69,8 +71,8 @@ Endpoints that return this shape:
 
 Both live-control endpoints return the same accepted response shape on success:
 
-- `POST /sessions/:id/input`
-- `POST /sessions/:id/kill`
+- `POST /api/v1/sessions/:id/input`
+- `POST /api/v1/sessions/:id/kill`
 
 ```json
 {
@@ -102,11 +104,11 @@ Shared non-success responses:
 
 - `v1` clients may rely on the documented field names and top-level response shapes above.
 - Additive fields are backward compatible. Clients should ignore unknown fields when safe.
-- Any incompatible change must ship under a new `apiVersion` value exposed by `GET /health`.
+- Any incompatible change must ship under a new `apiVersion` value exposed by `GET /api/v1/health` or its successor route.
 - Before a client switches to a new major contract, the Coven repo should publish updated contract docs and a migration note that maps the old shape to the new one.
 
 ## Recommended client handshake
 
-1. Call `GET /health`.
-2. Verify `apiVersion === "v1"`.
+1. Call `GET /api/v1/health`.
+2. Verify `apiVersion === "v1"` and `supportedApiVersions` includes `"v1"`.
 3. Only then depend on the documented `v1` sessions/events shapes.
