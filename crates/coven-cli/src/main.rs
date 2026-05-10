@@ -1462,10 +1462,8 @@ fn archive_session_command(session_id: &str) -> Result<()> {
     }
 
     store::archive_session(&conn, session_id, &current_timestamp())?;
-    println!("archived session {session_id}");
-    println!(
-        "Summon it later with `coven summon {session_id}` or view it with `coven sessions --all`."
-    );
+    println!("archived session");
+    println!("Summon it later with `coven summon <session-id>` or view it with `coven sessions --all`.");
     Ok(())
 }
 
@@ -1478,7 +1476,7 @@ fn summon_session_command(session_id: &str) -> Result<()> {
 
     if session.archived_at.is_some() {
         store::summon_session(&conn, session_id, &current_timestamp())?;
-        eprintln!("summoned session {session_id} from the archive");
+        eprintln!("summoned session from the archive");
     }
 
     attach_session(session_id)
