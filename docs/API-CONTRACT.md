@@ -75,7 +75,7 @@ Clients should ignore unknown future capability ids and action ids unless they e
 }
 ```
 
-Successful safe actions return `202`:
+Immediately completed safe actions return `200`:
 
 ```json
 {

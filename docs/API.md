@@ -86,7 +86,7 @@ When no daemon metadata is available, `daemon` is `null`.
 }
 ```
 
-Successful safe actions return `202` with an event-shaped payload that clients can render optimistically or fold into later event streams:
+Immediately completed safe actions return `200` with an event-shaped payload that clients can render optimistically or fold into later event streams:
 
 ```json
 {
