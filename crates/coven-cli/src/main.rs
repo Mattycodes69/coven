@@ -23,6 +23,7 @@ mod daemon;
 mod harness;
 mod openclaw_repo;
 mod patch;
+mod pc;
 mod project;
 mod pty_runner;
 mod store;
@@ -96,6 +97,11 @@ enum Command {
         #[command(subcommand)]
         command: PatchCommand,
     },
+    #[command(about = "Diagnose and relieve macOS system pressure")]
+    Pc {
+        #[command(subcommand)]
+        command: Option<pc::PcCommand>,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -149,6 +155,7 @@ fn main() -> Result<()> {
         Some(Command::Archive { session_id }) => archive_session_command(&session_id),
         Some(Command::Sacrifice { session_id, yes }) => sacrifice_session_command(&session_id, yes),
         Some(Command::Patch { command }) => run_patch_command(command),
+        Some(Command::Pc { command }) => pc::run_pc_command(command),
     }
 }
 
