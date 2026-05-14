@@ -15,6 +15,7 @@ The guiding promise: OpenCoven turns AI from a blank chatbox into a living works
 - [Product spec](PRODUCT-SPEC.md) — what Coven is and what belongs in MVP.
 - [Architecture diagrams](ARCHITECTURE.md) — runtime topology, session lifecycle, and authority boundary diagrams.
 - [Session lifecycle](SESSION-LIFECYCLE.md) — launch, attach/replay, archive, summon, sacrifice, orphan recovery, and events.
+- [Authentication and local access](AUTH.md) — current same-user Unix-socket access model, provider-auth boundary, and hardening gaps.
 - [Local API](API.md) — versioned Unix-socket API contract for comux, OpenClaw, and other clients.
 - [Operational model](OPERATIONAL-MODEL.md) — authority boundaries between Rust, comux, OpenClaw, and npm wrappers.
 - [Safety model](SAFETY-MODEL.md) — local trust boundary, secret handling, socket posture, and automation approvals.

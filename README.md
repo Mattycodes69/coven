@@ -128,6 +128,8 @@ Session rituals are intentionally explicit. **Archive** is reversible and keeps 
 
 The daemon exposes a small versioned HTTP API over a Unix socket for first-party and external clients. The current public contract is **`v1`**; new clients should use the `/api/v1` prefix.
 
+Coven's current auth posture is same-user local access over `<covenHome>/coven.sock`. It does not use daemon OAuth, JWTs, bearer tokens, API keys, or browser cookies; provider auth stays with the harness CLIs such as Codex and Claude Code. See [`docs/AUTH.md`](docs/AUTH.md) before adding a new client, dashboard, remote bridge, or browser-facing transport.
+
 | Endpoint | Purpose |
 |---|---|
 | `GET /api/v1/api-version` | Read the active API version and supported versions |

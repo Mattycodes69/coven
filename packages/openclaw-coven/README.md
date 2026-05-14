@@ -16,6 +16,8 @@ OpenClaw core does not include OpenCoven or Coven. This package is the integrati
 - A local Coven daemon with its Unix socket at `~/.coven/coven.sock` by default
 - Harness auth/config handled by the harness itself, for example Codex or Claude Code
 
+See [`../../docs/AUTH.md`](../../docs/AUTH.md) for Coven's auth and local-access model. This plugin does not receive provider credentials and does not authenticate to Coven with OAuth, JWTs, bearer tokens, API keys, or cookies. It validates the configured local socket trust anchor and then relies on the Rust daemon to enforce launch, path, harness, session, input, and kill policy.
+
 ## Install
 
 Install the external plugin from ClawHub:
@@ -81,6 +83,7 @@ The plugin is a client, not a trust root. The Rust daemon must still validate pr
 - Does not expose OpenClaw tools to Coven-managed harnesses.
 - Restricts socket configuration to `<covenHome>/coven.sock`.
 - Rejects unknown ACP agent ids unless explicitly mapped in plugin config.
+- Must not be treated as permission to expose the Coven daemon socket through TCP, browser, mobile, or remote transports.
 
 ## Version compatibility
 

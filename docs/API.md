@@ -4,6 +4,8 @@ _Last updated: 2026-05-09_
 
 Coven exposes a small HTTP API over the local Unix socket at `<covenHome>/coven.sock`. The Rust daemon is the authority boundary: clients may validate for UX, but the daemon still validates project roots, cwd, harness ids, session ids, input, and live-session state before acting.
 
+See [Authentication and local access](AUTH.md) for the current auth posture. In short: the daemon API does not use OAuth, JWTs, bearer tokens, API keys, or cookies today. Access is local Unix-socket based, provider credentials stay with the harness CLIs, and any remote, browser, or TCP exposure needs a separate auth design.
+
 ## Versioning
 
 The current public API contract is **`v1`**.

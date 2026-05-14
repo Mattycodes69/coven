@@ -17,6 +17,19 @@ Every client is untrusted for enforcement purposes, including:
 
 Clients may improve UX, but they must not be the only place where a sensitive decision is enforced.
 
+## Authentication and local access
+
+Coven's current auth solution is a same-user local access model, not a network authentication protocol.
+
+- The daemon API runs over `<covenHome>/coven.sock`, not TCP.
+- There is no daemon OAuth, JWT, bearer token, API key, browser cookie, RBAC, or hosted account session in v0.
+- Provider credentials stay in the harness/provider local auth flow, such as Codex or Claude Code.
+- Clients are untrusted for enforcement; the Rust daemon must still revalidate every sensitive request.
+- The external OpenClaw plugin performs socket trust-anchor validation before connecting, but Rust-side private `COVEN_HOME` ownership and permission checks remain a hardening priority.
+- Do not expose the raw socket API through localhost TCP, a browser page, a remote bridge, or a mobile pairing flow without a separate explicit auth design.
+
+The detailed contract lives in [Authentication and local access](AUTH.md).
+
 ## Core rules
 
 - Launch only with an explicit project root.
