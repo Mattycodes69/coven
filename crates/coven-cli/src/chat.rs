@@ -10,7 +10,7 @@ use crossterm::{
 use ratatui::{
     backend::CrosstermBackend,
     layout::{Alignment, Constraint, Layout, Margin, Rect},
-    style::{Color, Modifier, Style, Stylize},
+    style::{Color, Style, Stylize},
     text::{Line, Span, Text},
     widgets::{
         Block, Borders, Clear, List, ListItem, Paragraph, Scrollbar, ScrollbarOrientation,
@@ -25,7 +25,6 @@ use crate::harness;
 
 const PURPLE: Color = Color::Indexed(141); // #af87ff — signature purple
 const GOLD: Color = Color::Indexed(220); // #ffd700 — accent gold
-const ROSE: Color = Color::Indexed(218); // #ffafdf — warm accent
 const MOON: Color = Color::Indexed(117); // #87d7ff — cool accent
 const DIM_FG: Color = Color::Indexed(243); // muted gray
 const SURFACE: Color = Color::Indexed(235); // dark surface
@@ -83,7 +82,6 @@ struct App {
     show_help: bool,
     spinner_frame: usize,
     is_responding: bool,
-    response_buffer: String,
     last_tick: Instant,
 }
 
@@ -106,7 +104,6 @@ impl App {
             show_help: false,
             spinner_frame: 0,
             is_responding: false,
-            response_buffer: String::new(),
             last_tick: Instant::now(),
         };
 
@@ -121,9 +118,7 @@ impl App {
                 agent.label, agent.harness
             ));
         } else {
-            app.push_system_message(
-                "No agents available. Run `coven doctor` to check your setup.",
-            );
+            app.push_system_message("No agents available. Run `coven doctor` to check your setup.");
         }
 
         app
@@ -359,10 +354,7 @@ impl App {
             return;
         }
 
-        let filename = format!(
-            "chat-{}.md",
-            chrono::Utc::now().format("%Y%m%d-%H%M%S")
-        );
+        let filename = format!("chat-{}.md", chrono::Utc::now().format("%Y%m%d-%H%M%S"));
         let path = export_dir.join(&filename);
 
         let mut content = String::from("# Coven Chat Export\n\n");
@@ -484,12 +476,15 @@ fn render_ui(f: &mut Frame, app: &mut App) {
     let area = f.area();
 
     // Background fill
-    f.render_widget(Block::default().style(Style::default().bg(Color::Black)), area);
+    f.render_widget(
+        Block::default().style(Style::default().bg(Color::Black)),
+        area,
+    );
 
     // Main layout: status bar (1) + chat area + input area (3)
     let chunks = Layout::vertical([
         Constraint::Length(1), // top status bar
-        Constraint::Min(6),   // chat messages
+        Constraint::Min(6),    // chat messages
         Constraint::Length(3), // input
         Constraint::Length(1), // bottom hint bar
     ])
@@ -520,10 +515,7 @@ fn render_status_bar(f: &mut Frame, app: &App, area: Rect) {
             format!("\u{25C9} {agent_name}"),
             Style::default().fg(GOLD).bold(),
         ),
-        Span::styled(
-            format!(" ({harness})"),
-            Style::default().fg(DIM_FG),
-        ),
+        Span::styled(format!(" ({harness})"), Style::default().fg(DIM_FG)),
         Span::styled(" \u{2502} ", Style::default().fg(DIM_FG)),
         if app.is_responding {
             Span::styled(
@@ -536,8 +528,7 @@ fn render_status_bar(f: &mut Frame, app: &App, area: Rect) {
     ];
 
     let status_line = Line::from(status_spans);
-    let status = Paragraph::new(status_line)
-        .style(Style::default().bg(SURFACE));
+    let status = Paragraph::new(status_line).style(Style::default().bg(SURFACE));
     f.render_widget(status, area);
 }
 
@@ -559,18 +550,9 @@ fn render_messages(f: &mut Frame, app: &mut App, area: Rect) {
 
         // Sender header
         let (sender_style, prefix) = match msg.role {
-            MessageRole::User => (
-                Style::default().fg(MOON).bold(),
-                "\u{25B6} You",
-            ),
-            MessageRole::Agent => (
-                Style::default().fg(GOLD).bold(),
-                "",
-            ),
-            MessageRole::System => (
-                Style::default().fg(PURPLE).italic(),
-                "\u{2731} ",
-            ),
+            MessageRole::User => (Style::default().fg(MOON).bold(), "\u{25B6} You"),
+            MessageRole::Agent => (Style::default().fg(GOLD).bold(), ""),
+            MessageRole::System => (Style::default().fg(PURPLE).italic(), "\u{2731} "),
         };
 
         let sender_text = match msg.role {
@@ -705,8 +687,8 @@ fn render_hint_bar(f: &mut Frame, app: &App, area: Rect) {
         ]
     };
 
-    let hint_line = Paragraph::new(Line::from(hints))
-        .style(Style::default().bg(SURFACE).fg(DIM_FG));
+    let hint_line =
+        Paragraph::new(Line::from(hints)).style(Style::default().bg(SURFACE).fg(DIM_FG));
     f.render_widget(hint_line, area);
 }
 
@@ -720,27 +702,39 @@ fn render_help_overlay(f: &mut Frame, area: Rect) {
     f.render_widget(Clear, popup_area);
 
     let help_items = vec![
-        ("Basics", vec![
-            ("/help, /h", "Toggle this help overlay"),
-            ("/clear, /cls", "Clear chat history"),
-            ("/exit, /quit, /q", "Exit Coven chat"),
-            ("/export", "Save conversation to ~/.coven/exports/"),
-        ]),
-        ("Agents", vec![
-            ("/agent", "Open agent picker"),
-            ("/agent <name>", "Switch to named agent"),
-        ]),
-        ("Sessions", vec![
-            ("/session <id>", "Attach to session (coming soon)"),
-            ("/attach <id>", "Attach to agent task (coming soon)"),
-        ]),
-        ("Advanced", vec![
-            ("/run <cmd>", "Execute command (coming soon)"),
-            ("/delegate <a> <t>", "Queue task for agent (coming soon)"),
-            ("/trace", "Show execution trace (coming soon)"),
-            ("/mem <query>", "Search agent memory (coming soon)"),
-            ("/debug", "Toggle debug mode (coming soon)"),
-        ]),
+        (
+            "Basics",
+            vec![
+                ("/help, /h", "Toggle this help overlay"),
+                ("/clear, /cls", "Clear chat history"),
+                ("/exit, /quit, /q", "Exit Coven chat"),
+                ("/export", "Save conversation to ~/.coven/exports/"),
+            ],
+        ),
+        (
+            "Agents",
+            vec![
+                ("/agent", "Open agent picker"),
+                ("/agent <name>", "Switch to named agent"),
+            ],
+        ),
+        (
+            "Sessions",
+            vec![
+                ("/session <id>", "Attach to session (coming soon)"),
+                ("/attach <id>", "Attach to agent task (coming soon)"),
+            ],
+        ),
+        (
+            "Advanced",
+            vec![
+                ("/run <cmd>", "Execute command (coming soon)"),
+                ("/delegate <a> <t>", "Queue task for agent (coming soon)"),
+                ("/trace", "Show execution trace (coming soon)"),
+                ("/mem <query>", "Search agent memory (coming soon)"),
+                ("/debug", "Toggle debug mode (coming soon)"),
+            ],
+        ),
     ];
 
     let mut lines: Vec<Line<'_>> = Vec::new();
@@ -795,7 +789,11 @@ fn render_agent_select(f: &mut Frame, app: &App, area: Rect) {
             let is_selected = app.agent_select_index == i;
 
             let indicator = if is_active { "\u{25C9}" } else { "\u{25CB}" };
-            let availability = if agent.available { "" } else { " [unavailable]" };
+            let availability = if agent.available {
+                ""
+            } else {
+                " [unavailable]"
+            };
 
             let style = if is_selected {
                 Style::default().fg(GOLD).bold().bg(SURFACE_LIGHT)
@@ -868,15 +866,11 @@ fn run_event_loop(
                 Event::Key(key) => {
                     if app.input_mode == InputMode::AgentSelect {
                         match key.code {
-                            KeyCode::Up => {
-                                if app.agent_select_index > 0 {
-                                    app.agent_select_index -= 1;
-                                }
+                            KeyCode::Up if app.agent_select_index > 0 => {
+                                app.agent_select_index -= 1;
                             }
-                            KeyCode::Down => {
-                                if app.agent_select_index + 1 < app.agents.len() {
-                                    app.agent_select_index += 1;
-                                }
+                            KeyCode::Down if app.agent_select_index + 1 < app.agents.len() => {
+                                app.agent_select_index += 1;
                             }
                             KeyCode::Enter => {
                                 let idx = app.agent_select_index;
@@ -901,11 +895,13 @@ fn run_event_loop(
                     }
 
                     match key.code {
-                        KeyCode::Enter => {
-                            if let Some(SlashCommandResult::Quit) = app.handle_input() {
-                                return Ok(());
+                        KeyCode::Enter => match app.handle_input() {
+                            Some(SlashCommandResult::Quit) => return Ok(()),
+                            Some(SlashCommandResult::Unknown(cmd)) => {
+                                app.push_system_message(&format!("Unknown command: {cmd}"));
                             }
-                        }
+                            _ => {}
+                        },
                         KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                             return Ok(());
                         }
@@ -952,11 +948,9 @@ fn run_event_loop(
                             app.scroll_offset = app.scroll_offset.saturating_add(page);
                             // Will be clamped during render
                         }
-                        KeyCode::Esc => {
-                            if !app.input.is_empty() {
-                                app.input.clear();
-                                app.cursor_pos = 0;
-                            }
+                        KeyCode::Esc if !app.input.is_empty() => {
+                            app.input.clear();
+                            app.cursor_pos = 0;
                         }
                         _ => {}
                     }
@@ -994,11 +988,7 @@ fn truncate_str(s: &str, max: usize) -> &str {
     if s.len() <= max {
         s
     } else {
-        let end = s
-            .char_indices()
-            .nth(max)
-            .map(|(i, _)| i)
-            .unwrap_or(s.len());
+        let end = s.char_indices().nth(max).map(|(i, _)| i).unwrap_or(s.len());
         &s[..end]
     }
 }
