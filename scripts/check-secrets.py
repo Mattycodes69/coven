@@ -22,6 +22,10 @@ LOCKFILE_NODE_MODULE_KEY = re.compile(r'''^\s*["']?node_modules/(?:@?[A-Za-z0-9_
 LOCKFILE_PACKAGE_VERSION_ENTRY = re.compile(r"^\s*['\"]?@?[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)?['\"]?\s*:\s*\d+\.\d+\.\d+(?:[-+][A-Za-z0-9_.-]+)?\s*$")
 LOCKFILE_INTEGRITY_LINE = re.compile(r'''["']?\bintegrity\b["']?\s*:\s*["']?(?:sha256|sha384|sha512)-[A-Za-z0-9+/=]+["']?''')
 LOCKFILE_RESOLVED_LINE = re.compile(r'''["']?\bresolved\b["']?\s*:\s*["']?https://registry\.npmjs\.org/[A-Za-z0-9_+/@.,~%:-]+\.tgz["']?''')
+OPENCOVEN_GITHUB_URL = re.compile(r"https://github\.com/OpenCoven/coven/(?:blob|tree)/[A-Za-z0-9_./@%+-]+")
+OPENCOVEN_LOCAL_WORKTREE = re.compile(
+    r"/Users/[A-Za-z0-9_.-]+/Documents/GitHub/OpenCoven/coven/\.worktrees/[A-Za-z0-9_.-]+"
+)
 SECRET_RULES: list[tuple[str, re.Pattern[str]]] = [
     ("private_key", re.compile(r"-----BEGIN (?:RSA |DSA |EC |OPENSSH |PGP )?PRIVATE KEY-----")),
     ("aws_access_key", re.compile(r"AKIA[0-9A-Z]{16}")),
@@ -75,6 +79,23 @@ def is_known_safe_lockfile_line(path: str, line: str) -> bool:
     )
 
 
+def is_local_path_like_token(token: str) -> bool:
+    normalized = token.strip("/")
+    parts = normalized.split("/")
+    if len(parts) < 4:
+        return False
+    if parts[0] in {"Users", "home", "private", "var", "tmp", "Volumes"}:
+        return True
+    return ".worktrees" in parts or "worktrees" in parts
+
+
+def is_public_repo_url_like_token(token: str) -> bool:
+    normalized = token.strip("/")
+    return normalized.startswith("github.com/OpenCoven/coven/") and (
+        "/blob/" in normalized or "/tree/" in normalized
+    )
+
+
 def scan_text(text: str, path: str) -> list[tuple[str, int, str]]:
     hits: list[tuple[str, int, str]] = []
     for line_number, line in enumerate(text.splitlines(), 1):
@@ -84,11 +105,15 @@ def scan_text(text: str, path: str) -> list[tuple[str, int, str]]:
                 hits.append((path, line_number, name))
         if allow:
             continue
+        if OPENCOVEN_GITHUB_URL.search(line) or OPENCOVEN_LOCAL_WORKTREE.search(line):
+            continue
         if is_known_safe_lockfile_line(path, line):
             continue
         for match in re.finditer(r"\b[A-Za-z0-9_+/@.-]{32,}\b", line):
             token = match.group(0)
             if re.fullmatch(r"[0-9a-f]{32,64}", token):
+                continue
+            if is_local_path_like_token(token) or is_public_repo_url_like_token(token):
                 continue
             if entropy(token) >= 4.3:
                 hits.append((path, line_number, "high_entropy"))

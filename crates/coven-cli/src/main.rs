@@ -19,7 +19,6 @@ use crossterm::{
 use uuid::Uuid;
 
 mod api;
-mod chat;
 mod control_plane;
 mod daemon;
 mod harness;
@@ -29,6 +28,8 @@ mod pc;
 mod project;
 mod pty_runner;
 mod store;
+mod theme;
+mod tui;
 mod verification;
 
 const DEFAULT_COVEN_HOME_DIR: &str = ".coven";
@@ -146,7 +147,7 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
     match cli.command {
         None => run_magical_tui(),
-        Some(Command::Chat) => chat::run_chat(),
+        Some(Command::Chat) => tui::chat::run_chat(),
         Some(Command::Tui) => run_magical_tui(),
         Some(Command::Doctor) => run_doctor(),
         Some(Command::Daemon { command }) => run_daemon_command(command),
@@ -249,12 +250,6 @@ struct MagicalTuiItem {
     action: MagicalTuiAction,
 }
 
-const PURPLE: &str = "\x1b[38;5;141m";
-const GOLD: &str = "\x1b[38;5;220m";
-const ROSE: &str = "\x1b[38;5;218m";
-const MOON: &str = "\x1b[38;5;117m";
-const DIM: &str = "\x1b[2m";
-const RESET: &str = "\x1b[0m";
 const MAGICAL_TUI_DEFAULT_INNER_WIDTH: usize = 76;
 const MAGICAL_TUI_MAX_INNER_WIDTH: usize = 96;
 const MAGICAL_TUI_MIN_INNER_WIDTH: usize = 40;
@@ -467,7 +462,9 @@ fn run_magical_tui_action(action: MagicalTuiAction) -> Result<()> {
         | MagicalTuiAction::ArchiveSession
         | MagicalTuiAction::SacrificeSession => run_session_browser(true),
         MagicalTuiAction::Quit => {
-            println!("{PURPLE}The circle fades. Nothing changed.{RESET}");
+            let primary = theme::fg(theme::PRIMARY);
+            let reset = theme::reset();
+            println!("{primary}The circle fades. Nothing changed.{reset}");
             Ok(())
         }
     }
@@ -560,7 +557,9 @@ fn run_default_prompt_session(prompt: &str) -> Result<()> {
 }
 
 fn run_tui_help() -> Result<()> {
-    println!("{GOLD}Coven TUI{RESET}");
+    let primary_strong = theme::fg(theme::PRIMARY_STRONG);
+    let reset = theme::reset();
+    println!("{primary_strong}Coven TUI{reset}");
     println!("Type a plain-language task and press Enter to launch your default harness.");
     println!("Use slash commands when you want a specific route. Examples:");
     println!("  fix the failing tests");
@@ -573,7 +572,9 @@ fn run_tui_help() -> Result<()> {
 }
 
 fn run_new_user_start_here() -> Result<()> {
-    println!("{GOLD}Coven quick start{RESET}");
+    let primary_strong = theme::fg(theme::PRIMARY_STRONG);
+    let reset = theme::reset();
+    println!("{primary_strong}Coven quick start{reset}");
     println!("Coven is a safe room for coding agents. It keeps each run tied to this project,");
     println!("records the session, and lets other tools list or attach to the work later.\n");
     println!("Recommended first run:");
@@ -585,7 +586,9 @@ fn run_new_user_start_here() -> Result<()> {
 }
 
 fn run_guided_harness_session() -> Result<()> {
-    println!("{GOLD}Run an agent in this project{RESET}");
+    let primary_strong = theme::fg(theme::PRIMARY_STRONG);
+    let reset = theme::reset();
+    println!("{primary_strong}Run an agent in this project{reset}");
     println!("Coven will create a session record, validate the project root, then attach to the harness.\n");
     let default_harness = default_harness_id().unwrap_or("codex");
     let harness_prompt = format!("Harness [default: {default_harness}; options: codex, claude]: ");
@@ -634,6 +637,8 @@ fn sessions_command_mode(
 }
 
 fn run_session_browser(include_archived: bool) -> Result<()> {
+    let primary = theme::fg(theme::PRIMARY);
+    let reset = theme::reset();
     let store_path = coven_store_path()?;
     let conn = store::open_store(&store_path)?;
     let sessions = if include_archived {
@@ -773,7 +778,7 @@ fn run_session_browser(include_archived: bool) -> Result<()> {
     if let Some((session, action)) = selected {
         run_session_browser_action(&session, action)
     } else {
-        println!("{PURPLE}Closed session browser. Nothing changed.{RESET}");
+        println!("{primary}Closed session browser. Nothing changed.{reset}");
         Ok(())
     }
 }
@@ -782,6 +787,8 @@ fn run_session_browser_action(
     session: &store::SessionRecord,
     action: SessionBrowserActionKind,
 ) -> Result<()> {
+    let primary = theme::fg(theme::PRIMARY);
+    let reset = theme::reset();
     match action {
         SessionBrowserActionKind::Attach => attach_session(&session.id),
         SessionBrowserActionKind::Summon => summon_session_command(&session.id),
@@ -792,13 +799,13 @@ fn run_session_browser_action(
                 first_chars(&session.id, 12)
             ))?;
             if confirmation != "sacrifice" {
-                println!("{PURPLE}Sacrifice cancelled. Nothing changed.{RESET}");
+                println!("{primary}Sacrifice cancelled. Nothing changed.{reset}");
                 return Ok(());
             }
             sacrifice_session_command(&session.id, true)
         }
         SessionBrowserActionKind::Back => {
-            println!("{PURPLE}Closed session browser. Nothing changed.{RESET}");
+            println!("{primary}Closed session browser. Nothing changed.{reset}");
             Ok(())
         }
     }
@@ -861,7 +868,12 @@ fn render_session_browser_frame_plain(
     selected_session: usize,
     selected_action: usize,
 ) -> String {
-    render_session_browser_frame_with_color(sessions, selected_session, selected_action, false)
+    render_session_browser_frame_with_mode(
+        sessions,
+        selected_session,
+        selected_action,
+        theme::TerminalMode::NoColor,
+    )
 }
 
 fn render_session_browser_frame_for_raw_terminal(
@@ -869,34 +881,39 @@ fn render_session_browser_frame_for_raw_terminal(
     selected_session: usize,
     selected_action: usize,
 ) -> String {
-    render_session_browser_frame_with_color(sessions, selected_session, selected_action, true)
-        .replace('\n', "\r\n")
+    render_session_browser_frame_with_mode(
+        sessions,
+        selected_session,
+        selected_action,
+        theme::mode(),
+    )
+    .replace('\n', "\r\n")
 }
 
-fn render_session_browser_frame_with_color(
+fn render_session_browser_frame_with_mode(
     sessions: &[store::SessionRecord],
     selected_session: usize,
     selected_action: usize,
-    color_enabled: bool,
+    mode: theme::TerminalMode,
 ) -> String {
-    let purple = ansi(color_enabled, PURPLE);
-    let gold = ansi(color_enabled, GOLD);
-    let rose = ansi(color_enabled, ROSE);
-    let moon = ansi(color_enabled, MOON);
-    let dim = ansi(color_enabled, DIM);
-    let reset = ansi(color_enabled, RESET);
+    let primary = theme::Fg::with_mode(theme::PRIMARY, mode);
+    let primary_strong = theme::Fg::with_mode(theme::PRIMARY_STRONG, mode);
+    let field_label = theme::Fg::with_mode(theme::FIELD_LABEL, mode);
+    let user_label = theme::Fg::with_mode(theme::USER_LABEL, mode);
+    let dim = theme::Fg::with_mode(theme::DIM, mode);
+    let reset = theme::Reset::with_mode(mode);
     let selected_session = selected_session.min(sessions.len().saturating_sub(1));
     let selected = &sessions[selected_session];
     let actions = session_browser_actions(selected);
     let selected_action = selected_action.min(actions.len().saturating_sub(1));
     let mut frame = String::new();
 
-    frame.push_str(&format!("{gold}Session browser{reset}\n"));
+    frame.push_str(&format!("{primary_strong}Session browser{reset}\n"));
     frame.push_str(&format!(
-        "{moon}Select work, then choose an action. No IDs to copy.{reset}\n\n"
+        "{user_label}Select work, then choose an action. No IDs to copy.{reset}\n\n"
     ));
     frame.push_str(&format!(
-        "{gold}Sessions{reset} {dim}(title | state | harness){reset}\n"
+        "{primary_strong}Sessions{reset} {dim}(title | state | harness){reset}\n"
     ));
     frame.push_str(&format!(
         "{dim}Up/Down or click session · Tab/click action · Enter runs{reset}\n"
@@ -909,9 +926,9 @@ fn render_session_browser_frame_with_color(
     {
         let pointer = if index == selected_session { ">" } else { " " };
         let color = if index == selected_session {
-            gold
+            primary_strong
         } else {
-            purple
+            primary
         };
         frame.push_str(&format!(
             "{color}{} {title:<30} {status:<9} {harness}{reset}\n",
@@ -928,34 +945,34 @@ fn render_session_browser_frame_with_color(
         ));
     }
 
-    frame.push_str(&format!("\n{gold}Selected{reset}\n"));
+    frame.push_str(&format!("\n{primary_strong}Selected{reset}\n"));
     frame.push_str(&format!(
-        "{rose}Title:{reset} {}\n",
+        "{field_label}Title:{reset} {}\n",
         fit_chars(&selected.title, 50)
     ));
     frame.push_str(&format!(
-        "{rose}Internal ID:{reset} {}  {rose}Runtime:{reset} {}  {rose}Harness:{reset} {}\n",
+        "{field_label}Internal ID:{reset} {}  {field_label}Runtime:{reset} {}  {field_label}Harness:{reset} {}\n",
         first_chars(&selected.id, 18),
         selected.status,
         selected.harness
     ));
     frame.push_str(&format!(
-        "{rose}Project:{reset} {}\n",
+        "{field_label}Project:{reset} {}\n",
         fit_chars(&selected.project_root, 58)
     ));
     frame.push_str(&format!(
-        "{rose}Updated:{reset} {}  {rose}State:{reset} {}\n",
+        "{field_label}Updated:{reset} {}  {field_label}State:{reset} {}\n",
         selected.updated_at,
         session_browser_status(selected)
     ));
 
-    frame.push_str(&format!("\n{gold}Actions{reset}\n"));
+    frame.push_str(&format!("\n{primary_strong}Actions{reset}\n"));
     for (index, action) in actions.iter().enumerate() {
         let pointer = if index == selected_action { ">" } else { " " };
         let color = if index == selected_action {
-            gold
+            primary_strong
         } else {
-            purple
+            primary
         };
         frame.push_str(&format!(
             "{color}{} [{}] {:<10} {}{reset}\n",
@@ -1013,7 +1030,12 @@ fn session_browser_action_row_to_index(
 }
 
 fn render_magical_tui_frame(selection: usize, input: &str) -> String {
-    render_magical_tui_frame_with_color_and_width(selection, input, true, magical_tui_inner_width())
+    render_magical_tui_frame_with_mode_and_width(
+        selection,
+        input,
+        theme::mode(),
+        magical_tui_inner_width(),
+    )
 }
 
 fn render_magical_tui_frame_for_raw_terminal(selection: usize, input: &str) -> String {
@@ -1021,17 +1043,22 @@ fn render_magical_tui_frame_for_raw_terminal(selection: usize, input: &str) -> S
 }
 
 fn render_magical_tui_frame_plain(selection: usize) -> String {
-    render_magical_tui_frame_with_color_and_width(
+    render_magical_tui_frame_with_mode_and_width(
         selection,
         "",
-        false,
+        theme::TerminalMode::NoColor,
         MAGICAL_TUI_DEFAULT_INNER_WIDTH,
     )
 }
 
 #[cfg(test)]
 fn render_magical_tui_frame_plain_with_width(selection: usize, inner_width: usize) -> String {
-    render_magical_tui_frame_with_color_and_width(selection, "", false, inner_width)
+    render_magical_tui_frame_with_mode_and_width(
+        selection,
+        "",
+        theme::TerminalMode::NoColor,
+        inner_width,
+    )
 }
 
 #[cfg(test)]
@@ -1040,45 +1067,60 @@ fn render_magical_tui_frame_plain_with_input(
     input: &str,
     inner_width: usize,
 ) -> String {
-    render_magical_tui_frame_with_color_and_width(selection, input, false, inner_width)
+    render_magical_tui_frame_with_mode_and_width(
+        selection,
+        input,
+        theme::TerminalMode::NoColor,
+        inner_width,
+    )
 }
 
-fn render_magical_tui_frame_with_color_and_width(
+fn render_magical_tui_frame_with_mode_and_width(
     selection: usize,
     input: &str,
-    color_enabled: bool,
+    mode: theme::TerminalMode,
     inner_width: usize,
 ) -> String {
     let inner_width = normalized_magical_tui_inner_width(inner_width);
-    let purple = ansi(color_enabled, PURPLE);
-    let gold = ansi(color_enabled, GOLD);
-    let rose = ansi(color_enabled, ROSE);
-    let moon = ansi(color_enabled, MOON);
-    let dim = ansi(color_enabled, DIM);
-    let reset = ansi(color_enabled, RESET);
+    let primary = theme::Fg::with_mode(theme::PRIMARY, mode);
+    let primary_strong = theme::Fg::with_mode(theme::PRIMARY_STRONG, mode);
+    let field_label = theme::Fg::with_mode(theme::FIELD_LABEL, mode);
+    let user_label = theme::Fg::with_mode(theme::USER_LABEL, mode);
+    let dim = theme::Fg::with_mode(theme::DIM, mode);
+    let reset = theme::Reset::with_mode(mode);
     let mut frame = String::new();
-    frame.push_str(&magical_tui_line("COVEN", gold, reset, inner_width));
+    frame.push_str(&magical_tui_line(
+        "COVEN",
+        primary_strong,
+        reset,
+        inner_width,
+    ));
     frame.push_str(&magical_tui_line(
         "Prompt-first agent console",
-        rose,
+        field_label,
         reset,
         inner_width,
     ));
     frame.push_str(&magical_tui_line(
         "Type natural language, or use slash commands.",
-        moon,
+        user_label,
         reset,
         inner_width,
     ));
     frame.push('\n');
     for line in magical_tui_graph_lines() {
-        frame.push_str(&magical_tui_line(line, purple, reset, inner_width));
+        frame.push_str(&magical_tui_line(line, primary, reset, inner_width));
     }
     frame.push('\n');
-    frame.push_str(&magical_tui_line("Input", gold, reset, inner_width));
+    frame.push_str(&magical_tui_line(
+        "Input",
+        primary_strong,
+        reset,
+        inner_width,
+    ));
     frame.push_str(&magical_tui_line(
         &magical_tui_prompt_row(input, inner_width),
-        moon,
+        user_label,
         reset,
         inner_width,
     ));
@@ -1092,14 +1134,18 @@ fn render_magical_tui_frame_with_color_and_width(
 
     frame.push_str(&magical_tui_line(
         "Slash commands",
-        gold,
+        primary_strong,
         reset,
         inner_width,
     ));
     for (index, item) in magical_tui_items().iter().enumerate() {
         let pointer = if index == selection { ">" } else { " " };
         let content = magical_tui_command_row(pointer, item, inner_width);
-        let color = if index == selection { gold } else { purple };
+        let color = if index == selection {
+            primary_strong
+        } else {
+            primary
+        };
         frame.push_str(&magical_tui_line(&content, color, reset, inner_width));
     }
 
@@ -1107,19 +1153,19 @@ fn render_magical_tui_frame_with_color_and_width(
     frame.push('\n');
     frame.push_str(&magical_tui_line(
         "Selected slash",
-        gold,
+        primary_strong,
         reset,
         inner_width,
     ));
     frame.push_str(&magical_tui_line(
         selected.description,
-        moon,
+        user_label,
         reset,
         inner_width,
     ));
     frame.push_str(&magical_tui_line(
         &format!("{} → {}", selected.slash, selected.command),
-        gold,
+        primary_strong,
         reset,
         inner_width,
     ));
@@ -1153,7 +1199,12 @@ fn magical_tui_prompt_row(input: &str, inner_width: usize) -> String {
     fit_chars(&format!("> {value}"), inner_width)
 }
 
-fn magical_tui_line(content: &str, text_color: &str, reset: &str, inner_width: usize) -> String {
+fn magical_tui_line(
+    content: &str,
+    text_color: impl std::fmt::Display,
+    reset: impl std::fmt::Display,
+    inner_width: usize,
+) -> String {
     format!("{text_color}{}{reset}\n", fit_chars(content, inner_width))
 }
 
@@ -1196,14 +1247,6 @@ fn fit_chars(value: &str, limit: usize) -> String {
     let mut fitted = value.chars().take(limit - 1).collect::<String>();
     fitted.push('…');
     fitted
-}
-
-fn ansi(enabled: bool, code: &'static str) -> &'static str {
-    if enabled {
-        code
-    } else {
-        ""
-    }
 }
 
 fn move_magical_tui_selection(current: usize, direction: MagicalTuiMove) -> usize {
