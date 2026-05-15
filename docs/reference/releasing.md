@@ -1,11 +1,14 @@
 ---
 summary: "Release flow for @opencoven/cli and platform packages."
+description: "Operator runbook for releasing Coven to npm: preflight checks, dry-run, publishing native packages, and postflight verification."
 read_when:
   - Cutting a release
-title: "Releasing"
+title: "Releasing Coven to npm"
 ---
 
-Coven publishes the npm wrapper and native platform packages from the **Release npm packages** GitHub Actions workflow. The source package versions stay `0.0.0`; the workflow dispatch version is the published npm version.
+Coven publishes the `@opencoven/cli` wrapper and its native platform packages (`@opencoven/cli-macos`, `@opencoven/cli-linux-x64`, `@opencoven/cli-windows`) from the **Release npm packages** GitHub Actions workflow.
+
+Use this page when you are cutting a release. The source package versions stay `0.0.0` in the repo; the workflow dispatch `version` input is the published npm version.
 
 ## Preflight
 
@@ -24,7 +27,7 @@ npm view @opencoven/cli-windows version dist-tags
 
 4. Confirm the changelog, package README status copy, and brand assets match the release.
 
-## Dry Run
+## Dry run
 
 Run the workflow with `publish=false` first. This builds all platform binaries and runs npm publish dry-runs without requiring npm credentials:
 
@@ -66,4 +69,4 @@ npm view @opencoven/cli-linux-x64 version dist-tags
 npm view @opencoven/cli-windows version dist-tags
 ```
 
-If any package did not publish, do not re-run blindly. Inspect the failed job, confirm which package versions exist on npm, and rerun only with a new version if npm has already accepted part of the release.
+If any package did not publish, do not re-run blindly. Inspect the failed job and confirm which package versions exist on npm. If npm has already accepted part of the release, rerun only with a new version.
