@@ -91,9 +91,39 @@
                 ]
               },
               {
-                "group": "Sessions and harnesses",
+                "group": "Sessions",
                 "pages": [
-                  "SESSION-LIFECYCLE",
+                  "SESSION-LIFECYCLE"
+                ]
+              },
+              {
+                "group": "Harnesses",
+                "pages": [
+                  "harnesses/index",
+                  "harnesses/what-is-a-harness",
+                  "harnesses/codex",
+                  "harnesses/claude-code",
+                  "harnesses/installing",
+                  "harnesses/project-root",
+                  "harnesses/working-directory",
+                  "harnesses/provider-auth",
+                  "harnesses/title-and-metadata",
+                  "harnesses/troubleshooting"
+                ]
+              },
+              {
+                "group": "Future runtimes",
+                "pages": [
+                  "harnesses/aider",
+                  "harnesses/hermes",
+                  "harnesses/gemini-cli",
+                  "harnesses/cline",
+                  "harnesses/custom"
+                ]
+              },
+              {
+                "group": "Reference",
+                "pages": [
                   "HARNESS-ADAPTERS",
                   "FUTURE-HARNESSES"
                 ]
