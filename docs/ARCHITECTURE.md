@@ -130,6 +130,6 @@ The npm wrapper packages are published for early adopters:
 - `@opencoven/cli`
 - `@opencoven/cli-macos`
 - `@opencoven/cli-linux-x64`
-- `@opencoven/cli-windows` once the next Windows-enabled release is published
+- `@opencoven/cli-windows` for Windows x64
 
 The source package versions stay template-like in the repo; release workflow dispatch supplies the published version and builds platform packages. Check the npm registry and GitHub releases before making version-specific release claims.
