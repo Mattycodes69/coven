@@ -46,7 +46,7 @@ Shipped:
 - Session browser and rituals: **Rejoin**, **View Log**, **Summon**, **Archive**, **Sacrifice**.
 - Scriptable and human session output: `coven sessions`, `--plain`, and `--all`.
 - Local HTTP-over-Unix-socket API for clients.
-- Versioned `coven.daemon.v1` API contract with named apiVersion, machine-readable capabilities, structured errors, and monotonic event cursors. See [`docs/API-CONTRACT.md`](API-CONTRACT.md).
+- Versioned `coven.daemon.v1` API contract with named apiVersion, machine-readable capabilities, structured errors, and monotonic event cursors. See [`docs/API-CONTRACT.md`](/API-CONTRACT).
 - Compatibility tests for the external OpenClaw bridge against versioned daemon responses.
 - First-run recovery hints for missing Codex or Claude Code CLIs.
 - Real CLI smoke coverage for daemon restart, attach replay, kill, archive, summon, and sacrifice flows.
@@ -60,7 +60,7 @@ Shipped:
 
 Now:
 
-- Keep the versioned daemon API contract and external-client compatibility work aligned. See [`docs/API-CONTRACT.md`](API-CONTRACT.md).
+- Keep the versioned daemon API contract and external-client compatibility work aligned. See [`docs/API-CONTRACT.md`](/API-CONTRACT).
 - Keep the public docs aligned with the actual CLI/API surface.
 
 Next:

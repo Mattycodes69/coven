@@ -31,14 +31,14 @@ title: "Coven"
 </p>
 
 <Columns>
-  <Card title="Get started" href="/start/getting-started" icon="rocket">
-    Install Coven, run `coven doctor`, and launch your first harness session in about five minutes.
+  <Card title="Get started" href="/GETTING-STARTED" icon="rocket">
+    Install Coven, run `coven doctor`, and launch a project-scoped harness session.
   </Card>
-  <Card title="Concepts" href="/concepts/architecture" icon="compass">
-    Familiars, harnesses, sessions, rituals, daemon, and the local socket authority boundary.
+  <Card title="Runtime model" href="/ARCHITECTURE" icon="compass">
+    Daemon, PTY supervision, project-root validation, sessions, events, and local socket authority.
   </Card>
-  <Card title="Open the CLI" href="/reference/cli" icon="terminal">
-    Every command, every flag, every ritual — `coven`, `coven run`, `coven sessions`, and friends.
+  <Card title="CLI reference" href="/reference/cli" icon="terminal">
+    Current `coven` commands: run, sessions, attach, daemon, doctor, archive, summon, and sacrifice.
   </Card>
 </Columns>
 
@@ -48,10 +48,10 @@ Coven is a **local-first runtime substrate**: a single Rust daemon that owns har
 
 **Who is it for?** Developers and operators who want their AI familiars to keep running locally, remember what they did, and stay inside project boundaries you can audit.
 
-**What makes it different?**
+**What makes it different today?**
 
 - **Local-first** — the daemon, the store, and the socket all live under `$COVEN_HOME`. No cloud relay, no daemon OAuth.
-- **Harness-neutral** — Codex and Claude Code today; Hermes, Aider, Gemini, and custom adapters next. Same lifecycle, same rituals.
+- **Harness-neutral** — Codex and Claude Code today, with a documented adapter bar for future harnesses. Same lifecycle, same rituals.
 - **Project-rooted** — every launch carries an explicit project root and canonicalized working directory. The Rust daemon revalidates each request.
 - **Inspectable** — sessions and events are SQLite rows you can browse with `coven sessions`, replay with `coven attach`, or sacrifice when you no longer need them.
 - **MIT licensed** — packaged for early adopters under `@opencoven/*`, command always `coven`.
@@ -78,23 +78,23 @@ The daemon is the single source of truth for sessions, PTY lifecycle, and capabi
 ## Key capabilities
 
 <Columns>
-  <Card title="Harness-neutral runtime" icon="layers" href="/harnesses">
-    Codex, Claude Code, and future Hermes/Aider/Gemini adapters launched through one supervised PTY layer.
+  <Card title="Harness-neutral runtime" icon="layers" href="/HARNESS-ADAPTERS">
+    Codex and Claude Code launched through one supervised PTY layer.
   </Card>
-  <Card title="Persistent familiars" icon="sparkles" href="/familiars">
-    Named agents with memory, tools, identity, roles, and continuity across sessions.
-  </Card>
-  <Card title="Project-scoped sessions" icon="folder-tree" href="/sessions/lifecycle">
+  <Card title="Project-scoped sessions" icon="folder-tree" href="/SESSION-LIFECYCLE">
     Every session pins a canonical project root and refuses to wander.
   </Card>
-  <Card title="Append-only event log" icon="scroll" href="/sessions/events">
-    Replay output, recover from daemon restarts, audit what a familiar actually did.
+  <Card title="Append-only event log" icon="scroll" href="/SESSION-LIFECYCLE">
+    Replay output, recover from daemon restarts, and audit what a harness actually did.
   </Card>
-  <Card title="Rituals" icon="moon" href="/rituals">
+  <Card title="Rituals" icon="moon" href="/SESSION-LIFECYCLE">
     Archive, summon, and sacrifice — explicit, beginner-safe verbs around destructive operations.
   </Card>
-  <Card title="Local socket API" icon="plug" href="/daemon/socket-api">
+  <Card title="Local socket API" icon="plug" href="/API">
     `GET /api/v1/health` first; then sessions, events, capabilities, and actions over Unix socket.
+  </Card>
+  <Card title="Client integration" icon="plug-zap" href="/CLIENT-INTEGRATION">
+    comux, OpenMeow, and the OpenClaw bridge integrate as socket clients, not launch authorities.
   </Card>
 </Columns>
 
@@ -105,7 +105,7 @@ The daemon is the single source of truth for sessions, PTY lifecycle, and capabi
     ```bash
     npm install -g @opencoven/cli
     ```
-    Building from source? See [Install from source](/install/from-source).
+    Building from source? See [Getting started](/GETTING-STARTED).
   </Step>
   <Step title="Check your environment">
     ```bash
@@ -132,7 +132,7 @@ The daemon is the single source of truth for sessions, PTY lifecycle, and capabi
   </Step>
 </Steps>
 
-Need the full install and developer setup? See [Getting started](/start/getting-started).
+Need the full install and developer setup? See [Getting started](/GETTING-STARTED).
 
 ## Session browser
 
@@ -170,19 +170,19 @@ enabled = true
 ## Start here
 
 <Columns>
-  <Card title="Concepts" href="/concepts/architecture" icon="book-open">
+  <Card title="Concepts" href="/CONCEPTS" icon="book-open">
     Runtime topology, authority boundary, session lifecycle, and the control plane.
   </Card>
-  <Card title="Harnesses" href="/harnesses" icon="layers">
+  <Card title="Harnesses" href="/HARNESS-ADAPTERS" icon="layers">
     Per-harness setup, provider auth boundary, and adapter expectations.
   </Card>
-  <Card title="Local API" href="/daemon/socket-api" icon="plug">
+  <Card title="Local API" href="/API" icon="plug">
     Versioned socket API for comux, OpenMeow, OpenClaw plugin, and your own clients.
   </Card>
-  <Card title="Rituals" href="/rituals" icon="moon">
+  <Card title="Sessions" href="/SESSION-LIFECYCLE" icon="moon">
     Archive, summon, and sacrifice — the beginner-safe verbs around session state.
   </Card>
-  <Card title="Help" href="/help" icon="life-buoy">
+  <Card title="Help" href="/TROUBLESHOOTING" icon="life-buoy">
     Common setup issues, environment variables, and how to file a diagnostics bundle.
   </Card>
 </Columns>
@@ -190,19 +190,16 @@ enabled = true
 ## Learn more
 
 <Columns>
-  <Card title="Full feature list" href="/concepts/features" icon="list">
+  <Card title="Operational model" href="/OPERATIONAL-MODEL" icon="list">
     Authority boundary, store guarantees, supported harnesses, and roadmap signals.
   </Card>
-  <Card title="Orchestration" href="/familiars/orchestration" icon="route">
-    Multi-harness handoff, capability routing, and parallel specialist lanes (Phase 1-4).
-  </Card>
-  <Card title="Safety model" href="/daemon/safety-model" icon="shield">
+  <Card title="Safety model" href="/SAFETY-MODEL" icon="shield">
     Trust boundary, secret handling, socket posture, and automation approvals.
   </Card>
-  <Card title="Troubleshooting" href="/help/troubleshooting" icon="wrench">
+  <Card title="Troubleshooting" href="/TROUBLESHOOTING" icon="wrench">
     Daemon diagnostics, harness install hints, orphan recovery, and verification.
   </Card>
-  <Card title="Brand and credits" href="/reference/brand" icon="info">
-    Project origins, palette, typography, and the OpenCoven mark.
+  <Card title="Roadmap" href="/ROADMAP" icon="map">
+    Current milestones, adapter direction, and public product boundaries.
   </Card>
 </Columns>

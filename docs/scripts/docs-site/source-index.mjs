@@ -1,65 +1,82 @@
 #!/usr/bin/env node
 
 /**
- * Create searchable index from documentation
- * Generates JSON for Pagefind search indexing
+ * Create the lightweight JSON source index for the curated public docs.
+ * Pagefind builds the production search files from dist/docs-site; this file is
+ * kept for local tooling and smoke tests.
  */
 
 import fs from 'fs';
 import path from 'path';
 import matter from 'gray-matter';
 
-const docsDir = path.join(process.cwd(), 'docs');
-const indexPath = path.join(process.cwd(), 'dist', 'docs-site', 'search-index.json');
+const rootDir = process.cwd();
+const config = JSON.parse(fs.readFileSync(path.join(rootDir, 'docs.json'), 'utf8'));
+const indexPath = path.join(rootDir, 'dist', 'docs-site', 'search-index.json');
 
-console.log('🔍 Indexing documentation for search...');
+function collectPages(node, pages = []) {
+  if (Array.isArray(node)) {
+    for (const item of node) collectPages(item, pages);
+    return pages;
+  }
 
-// Find all markdown files
-function findMarkdownFiles(dir, baseDir = '') {
-  const files = [];
-  const entries = fs.readdirSync(dir, { withFileTypes: true });
-  
-  for (const entry of entries) {
-    const fullPath = path.join(dir, entry.name);
-    const relPath = path.join(baseDir, entry.name);
-    
-    if (entry.isDirectory()) {
-      files.push(...findMarkdownFiles(fullPath, relPath));
-    } else if (entry.name.endsWith('.md')) {
-      files.push(relPath);
+  if (!node || typeof node !== 'object') return pages;
+
+  if (Array.isArray(node.pages)) {
+    for (const page of node.pages) {
+      if (typeof page === 'string') pages.push(page);
+      else collectPages(page, pages);
     }
   }
-  
-  return files;
+
+  for (const value of Object.values(node)) {
+    if (value !== node.pages) collectPages(value, pages);
+  }
+
+  return pages;
 }
 
-const files = findMarkdownFiles(docsDir);
+function firstHeading(markdown) {
+  const match = markdown.match(/^#\s+(.+)$/m);
+  return match?.[1]?.trim();
+}
+
+function firstParagraph(markdown) {
+  return markdown
+    .split(/\n{2,}/)
+    .map((chunk) => chunk.trim())
+    .find((chunk) => chunk && !chunk.startsWith('#') && !chunk.startsWith('<'))
+    ?.replace(/\s+/g, ' ')
+    .slice(0, 180);
+}
+
+function pageUrl(page) {
+  const normalized = page.replace(/^\/+/, '').replace(/\.md$/, '').replace(/\/index$/, '');
+  return normalized === 'index' ? '/' : `/${normalized}`;
+}
+
+console.log('Indexing public documentation...');
+
+const pages = [...new Set(collectPages(config.navigation ?? {}))];
 const index = [];
 
-for (const file of files) {
-  try {
-    const fullPath = path.join(docsDir, file);
-    const content = fs.readFileSync(fullPath, 'utf8');
-    const { data, content: markdown } = matter(content);
-    
-    // Create search entry
-    const url = '/' + file.replace(/\.md$/, '').replace(/\/index$/, '');
-    
-    index.push({
-      id: file,
-      title: data.title || 'Untitled',
-      description: data.description || '',
-      url,
-      content: markdown.substring(0, 500), // First 500 chars
-      tags: data.tags || []
-    });
-  } catch (error) {
-    console.error(`Error indexing ${file}:`, error.message);
-  }
+for (const page of pages) {
+  const file = `${page.replace(/^\/+/, '').replace(/\.md$/, '')}.md`;
+  const fullPath = path.join(rootDir, file);
+  const raw = fs.readFileSync(fullPath, 'utf8');
+  const { data, content } = matter(raw);
+
+  index.push({
+    id: file,
+    title: data.title || firstHeading(content) || 'Untitled',
+    description: data.description || data.summary || firstParagraph(content) || '',
+    url: pageUrl(page),
+    content: content.replace(/\s+/g, ' ').slice(0, 700),
+    tags: data.tags || []
+  });
 }
 
-// Write index
 fs.mkdirSync(path.dirname(indexPath), { recursive: true });
 fs.writeFileSync(indexPath, JSON.stringify(index, null, 2));
 
-console.log(`✅ Created search index with ${index.length} documents`);
+console.log(`Created search index with ${index.length} public documents`);

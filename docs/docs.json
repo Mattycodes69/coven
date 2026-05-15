@@ -1,14 +1,14 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "name": "Coven",
-  "description": "A framework for building intelligent agents with persistent memory, multi-agent delegation, and seamless integration across platforms. Run agents autonomously with Coven's harness system.",
+  "description": "Coven is a local-first runtime for project-scoped coding-agent harness sessions, append-only events, and a versioned local socket API.",
   "theme": "mint",
   "icons": {
     "library": "lucide"
   },
   "logo": {
-    "light": "/assets/coven-logo.svg",
-    "dark": "/assets/coven-logo-dark.svg"
+    "light": "/assets/opencoven-logo.svg",
+    "dark": "/assets/opencoven-white.svg"
   },
   "fonts": {
     "body": {
@@ -18,7 +18,7 @@
       "family": "DM Sans"
     }
   },
-  "favicon": "/assets/coven-favicon.svg",
+  "favicon": "/assets/opencoven-mark.svg",
   "colors": {
     "primary": "#7C3AED",
     "dark": "#7C3AED",
@@ -41,7 +41,7 @@
       },
       {
         "label": "Discord",
-        "href": "https://discord.com/invite/coven",
+        "href": "https://discord.gg/opencoven",
         "icon": "discord"
       }
     ]
@@ -53,106 +53,82 @@
         "language": "English",
         "tabs": [
           {
-            "tab": "Get started",
+            "tab": "Start",
             "groups": [
               {
-                "group": "Welcome",
+                "group": "Overview",
                 "pages": [
-                  "getting-started/index",
-                  "getting-started/what-is-coven",
-                  "getting-started/concepts"
+                  "index",
+                  "GETTING-STARTED",
+                  "start/coven-tui",
+                  "TROUBLESHOOTING"
                 ]
               },
               {
-                "group": "Installation",
+                "group": "Product frame",
                 "pages": [
-                  "getting-started/install",
-                  "getting-started/quickstart",
-                  "getting-started/first-agent"
+                  "CONCEPTS",
+                  "ROADMAP"
                 ]
               }
             ]
           },
           {
-            "tab": "Core",
+            "tab": "Runtime",
             "groups": [
               {
                 "group": "Architecture",
                 "pages": [
-                  "core/architecture/overview",
-                  "core/architecture/harnesses",
-                  "core/architecture/familiars",
-                  "core/architecture/sessions",
-                  "core/architecture/memory"
+                  "ARCHITECTURE",
+                  "OPERATIONAL-MODEL",
+                  "SAFETY-MODEL",
+                  "AUTH"
                 ]
               },
               {
-                "group": "Agents",
+                "group": "Sessions and harnesses",
                 "pages": [
-                  "core/agents/index",
-                  "core/agents/nova",
-                  "core/agents/sage",
-                  "core/agents/echo",
-                  "core/agents/charm",
-                  "core/agents/cody",
-                  "core/agents/kitty"
-                ]
-              },
-              {
-                "group": "API Reference",
-                "pages": [
-                  "core/api/gateway",
-                  "core/api/sessions",
-                  "core/api/delegation",
-                  "core/api/memory",
-                  "core/api/events"
+                  "SESSION-LIFECYCLE",
+                  "HARNESS-ADAPTERS",
+                  "FUTURE-HARNESSES"
                 ]
               }
             ]
           },
           {
-            "tab": "Guides",
+            "tab": "Integrate",
             "groups": [
               {
-                "group": "Common Tasks",
+                "group": "Local API",
                 "pages": [
-                  "guides/create-agent",
-                  "guides/delegate-work",
-                  "guides/manage-memory",
-                  "guides/multi-agent-orchestration",
-                  "guides/custom-tools"
+                  "API",
+                  "API-CONTRACT",
+                  "CLIENT-INTEGRATION"
                 ]
               },
               {
-                "group": "Advanced",
+                "group": "Clients",
                 "pages": [
-                  "guides/plugin-system",
-                  "guides/custom-harness",
-                  "guides/performance-tuning",
-                  "guides/security-best-practices"
+                  "COMUX-DEMO-LOOP"
                 ]
               }
             ]
           },
           {
-            "tab": "Resources",
+            "tab": "Reference",
             "groups": [
               {
-                "group": "Troubleshooting",
+                "group": "Lookup",
                 "pages": [
-                  "resources/troubleshooting/index",
-                  "resources/troubleshooting/common-issues",
-                  "resources/troubleshooting/debugging",
-                  "resources/troubleshooting/faq"
+                  "reference/cli",
+                  "reference/api",
+                  "GLOSSARY"
                 ]
               },
               {
-                "group": "Examples",
+                "group": "Project",
                 "pages": [
-                  "resources/examples/index",
-                  "resources/examples/basic-workflow",
-                  "resources/examples/advanced-delegation",
-                  "resources/examples/memory-patterns"
+                  "PRODUCT-SPEC"
                 ]
               }
             ]

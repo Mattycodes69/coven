@@ -2,7 +2,7 @@
 
 Coven is a local-first harness substrate. The Rust CLI/daemon is the authority layer; clients such as the CLI TUI, comux, and the optional OpenClaw plugin are presentation/integration layers.
 
-The versioned local socket API contract lives in [`docs/API-CONTRACT.md`](API-CONTRACT.md). Clients should use `GET /api/v1/health` and negotiate against `apiVersion: "coven.daemon.v1"` and the `capabilities` object before depending on session or event response shapes. All error responses use the structured `{ error: { code, message, details } }` envelope documented there.
+The versioned local socket API contract lives in [`docs/API-CONTRACT.md`](/API-CONTRACT). Clients should use `GET /api/v1/health` and negotiate against `apiVersion: "coven.daemon.v1"` and the `capabilities` object before depending on session or event response shapes. All error responses use the structured `{ error: { code, message, details } }` envelope documented there.
 
 ## Runtime topology
 
@@ -100,39 +100,11 @@ desktop/apps -> Coven -> OpenMeow UI updates
 
 `GET /api/v1/capabilities` lets OpenMeow and other clients discover what Coven can route. `POST /api/v1/actions` gives clients a stable intent envelope without coupling them directly to brittle OS automation APIs.
 
-## Future: Multi-Harness Orchestration Layer (Phase 1-4)
+## Future adapter boundary
 
-Coven v0 is single-harness per session. Future phases will add multi-harness orchestration:
+Coven's current public runtime is single-harness per session. The daemon already keeps the right lower-level boundary for future coordination work: clients can discover capabilities, launch known harnesses, read events, and preserve project-root enforcement in Rust.
 
-### What it does
-
-Orchestration lets users coordinate work across multiple harnesses (OpenClaw + Claude Code + Hermes, etc.) within a single project. Instead of manually switching harnesses, the orchestrator:
-
-1. **Routes tasks intelligently** — selects the best harness based on capability + availability
-2. **Transfers context** — hands off full state between harnesses with zero copy-paste
-3. **Enforces SLAs** — ensures tasks complete on time, escalating if harnesses are slow/unavailable
-4. **Audits work** — logs every handoff for compliance and debugging
-
-### Phase roadmap
-
-| Phase | Weeks | Focus | API Additions |
-|-------|-------|-------|---------------|
-| **v0 (Current)** | — | Single-harness sessions, adapters, socket API | Session + event endpoints |
-| **Phase 1** | 1-2 | Handoff protocol, context transfer | `POST /api/v1/handoff` |
-| **Phase 2** | 3-4 | Capability discovery, router, load balancing | `POST /api/v1/task/execute` |
-| **Phase 3** | 5-6 | Multi-instance, distributed context, affinity | Health heartbeat + node registration |
-| **Phase 4** | 7-8 | Audit dashboard, trace export, observability | Handoff ledger queries, metrics |
-
-### Expected changes to Coven
-
-- **Adapter interface refinement:** Adapters will declare `capabilities()` (e.g., `["code_fix", "testing"]`), `load()` (current task count), and `isHealthy()`.
-- **Handoff endpoints:** `POST /api/v1/handoff` to transfer task + context between harnesses.
-- **Task routing:** `POST /api/v1/task/execute` to submit work without specifying a harness; orchestrator routes automatically.
-- **No breaking changes:** v0 single-harness API remains unchanged; orchestration is opt-in above the layer.
-
-### Authority boundary remains
-
-The Rust daemon stays the authority boundary. Orchestration logic can be TypeScript/higher-level above the daemon, delegating safety-critical decisions (process spawning, cwd validation, capability checking) to Coven.
+Do not document future orchestration commands as user-facing until they exist in the CLI and socket API. Future coordination layers should build above the current session/event contract without bypassing daemon validation.
 
 ---
 
@@ -148,11 +120,11 @@ The Rust daemon stays the authority boundary. Orchestration logic can be TypeScr
 
 ## Distribution snapshot
 
-The npm wrapper packages are live for early adopters:
+The npm wrapper packages are published for early adopters:
 
 - `@opencoven/cli`
 - `@opencoven/cli-macos`
 - `@opencoven/cli-linux-x64`
 - `@opencoven/cli-windows` once the next Windows-enabled release is published
 
-The source package versions stay template-like in the repo; release workflow dispatch supplies the published version and builds platform packages. As of the current documentation pass, npm latest is `0.0.10` for the wrapper plus macOS/Linux packages; Windows x64 release wiring is staged for the next package release.
+The source package versions stay template-like in the repo; release workflow dispatch supplies the published version and builds platform packages. Check the npm registry and GitHub releases before making version-specific release claims.
