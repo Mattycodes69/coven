@@ -65,6 +65,7 @@ enum InputMode {
 enum SlashCommandResult {
     Handled,
     Quit,
+    #[allow(dead_code)]
     Unknown(String),
 }
 
@@ -475,6 +476,13 @@ fn discover_agents() -> Vec<AgentInfo> {
 fn render_ui(f: &mut Frame, app: &mut App) {
     let area = f.area();
 
+    // Guard against impossibly small terminals
+    if area.width < 10 || area.height < 5 {
+        let msg = Paragraph::new("Terminal too small").style(Style::default().fg(PURPLE));
+        f.render_widget(msg, area);
+        return;
+    }
+
     // Background fill
     f.render_widget(
         Block::default().style(Style::default().bg(Color::Black)),
@@ -657,10 +665,12 @@ fn render_input(f: &mut Frame, app: &App, area: Rect) {
     f.render_widget(input_widget, area);
 
     // Position cursor
-    let cursor_x = area.x + 1 + app.cursor_pos as u16;
-    let cursor_y = area.y + 1;
-    if cursor_x < area.x + area.width - 1 {
-        f.set_cursor_position((cursor_x, cursor_y));
+    if area.width > 2 && area.height > 1 {
+        let cursor_x = area.x + 1 + app.cursor_pos as u16;
+        let cursor_y = area.y + 1;
+        if cursor_x < area.x + area.width.saturating_sub(1) {
+            f.set_cursor_position((cursor_x, cursor_y));
+        }
     }
 }
 

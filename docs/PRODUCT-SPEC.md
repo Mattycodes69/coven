@@ -57,7 +57,7 @@ flowchart LR
   Router --> PTY[Harness PTYs]
 ```
 
-For fuller diagrams, see [Architecture diagrams](ARCHITECTURE.md).
+For fuller diagrams, see [Architecture diagrams](/ARCHITECTURE).
 
 ## Relationship to comux, OpenClaw, and OpenMeow
 

@@ -28,7 +28,7 @@ Coven's current auth solution is a same-user local access model, not a network a
 - The external OpenClaw plugin performs socket trust-anchor validation before connecting, but Rust-side private `COVEN_HOME` ownership and permission checks remain a hardening priority.
 - Do not expose the raw socket API through localhost TCP, a browser page, a remote bridge, or a mobile pairing flow without a separate explicit auth design.
 
-The detailed contract lives in [Authentication and local access](AUTH.md).
+The detailed contract lives in [Authentication and local access](/AUTH).
 
 ## Core rules
 

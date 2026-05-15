@@ -20,11 +20,11 @@ flowchart LR
   Rust --> Store[(SQLite session ledger + events)]
 ```
 
-See [Architecture diagrams](ARCHITECTURE.md) for the fuller runtime topology and lifecycle diagrams.
+See [Architecture diagrams](/ARCHITECTURE) for the fuller runtime topology and lifecycle diagrams.
 
 OpenClaw core does not include OpenCoven or Coven. The OpenClaw integration lives outside the OpenClaw repo as the ClawHub package `@opencoven/coven`, sourced from `packages/openclaw-coven` in this repo. That package is an opt-in compatibility adapter, not part of the Coven trust root.
 
-The current auth posture is documented in [Authentication and local access](AUTH.md). Coven uses a same-user local Unix-socket access model today. It does not provide OAuth, JWT, bearer-token, API-key, cookie, RBAC, or remote network auth for the daemon API.
+The current auth posture is documented in [Authentication and local access](/AUTH). Coven uses a same-user local Unix-socket access model today. It does not provide OAuth, JWT, bearer-token, API-key, cookie, RBAC, or remote network auth for the daemon API.
 
 ## Trust Rules
 

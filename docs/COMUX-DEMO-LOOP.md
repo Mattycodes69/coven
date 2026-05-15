@@ -76,4 +76,4 @@ Clients should keep their core UI usable when Coven is missing or stopped:
 
 ## Roadmap
 
-The broader OpenCoven roadmap remains the public tracking point for the end-to-end demo: [ROADMAP.md](ROADMAP.md).
+The broader OpenCoven roadmap remains the public tracking point for the end-to-end demo: [ROADMAP.md](/ROADMAP).
