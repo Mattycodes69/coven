@@ -28,7 +28,8 @@
   },
   "fonts": {
     "body": {
-      "family": "Fragment Mono"
+      "family": "Fragment Mono",
+      "weight": 500
     },
     "heading": {
       "family": "DM Sans",
