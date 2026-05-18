@@ -243,6 +243,8 @@ function renderMintlifyBlocks(markdown) {
 }
 
 function decodeHtml(value) {
+  // Decode &amp; last so that sequences like &amp;lt; decode to &lt; (not <),
+  // preventing double-unescaping of HTML entities.
   return String(value)
     .replaceAll('&lt;', '<')
     .replaceAll('&gt;', '>')
