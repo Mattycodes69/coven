@@ -35,7 +35,7 @@ Run the workflow with `publish=false` first. This builds all platform binaries a
 gh workflow run release-npm.yml \
   --ref main \
   -f publish=false \
-  -f version=0.0.12
+  -f version=0.0.13
 ```
 
 Watch the run:
@@ -53,7 +53,7 @@ Only publish after the dry-run succeeds and npm package versions are still avail
 gh workflow run release-npm.yml \
   --ref main \
   -f publish=true \
-  -f version=0.0.12
+  -f version=0.0.13
 ```
 
 The publish job uses the `npm-publish` environment and `NPM_ACCESS_TOKEN`. It publishes native packages first (`@opencoven/cli-linux-x64`, `@opencoven/cli-windows`, `@opencoven/cli-macos`) and then the wrapper package (`@opencoven/cli`).

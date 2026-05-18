@@ -33,7 +33,7 @@ npm view @opencoven/cli-windows version dist-tags
 gh workflow run release-npm.yml \
   --ref main \
   -f publish=false \
-  -f version=0.0.12
+  -f version=0.0.13
 ```
 
 Следите за запуском:
@@ -51,7 +51,7 @@ gh run watch <run-id>
 gh workflow run release-npm.yml \
   --ref main \
   -f publish=true \
-  -f version=0.0.12
+  -f version=0.0.13
 ```
 
 Job публикации использует окружение `npm-publish` и `NPM_ACCESS_TOKEN`. Сначала публикуются нативные пакеты (`@opencoven/cli-linux-x64`, `@opencoven/cli-windows`, `@opencoven/cli-macos`), а затем wrapper-пакет (`@opencoven/cli`).
