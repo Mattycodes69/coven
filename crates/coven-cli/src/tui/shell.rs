@@ -64,6 +64,33 @@ const MAGICAL_TUI_DEFAULT_INNER_WIDTH: usize = 76;
 pub(crate) const MAGICAL_TUI_MAX_INNER_WIDTH: usize = 96;
 const MAGICAL_TUI_MIN_INNER_WIDTH: usize = 40;
 
+struct RawModeGuard {
+    enabled: bool,
+}
+
+impl RawModeGuard {
+    fn enter() -> Result<Self> {
+        enable_raw_mode().context("failed to enter Coven's magical terminal mode")?;
+        Ok(Self { enabled: true })
+    }
+
+    fn restore(&mut self) -> Result<()> {
+        if self.enabled {
+            disable_raw_mode().context("failed to leave Coven's magical terminal mode")?;
+            self.enabled = false;
+        }
+        Ok(())
+    }
+}
+
+impl Drop for RawModeGuard {
+    fn drop(&mut self) {
+        if self.enabled {
+            let _ = disable_raw_mode();
+        }
+    }
+}
+
 pub(crate) fn magical_tui_items() -> &'static [MagicalTuiItem] {
     &[
         MagicalTuiItem {
@@ -190,7 +217,7 @@ pub(crate) fn run() -> Result<()> {
 
     let mut selection = 0;
     let mut input = String::new();
-    enable_raw_mode().context("failed to enter Coven's magical terminal mode")?;
+    let mut raw_mode = RawModeGuard::enter()?;
     let request = loop {
         execute!(io::stdout(), Clear(ClearType::All), MoveTo(0, 0))
             .context("failed to redraw Coven menu")?;
@@ -236,7 +263,7 @@ pub(crate) fn run() -> Result<()> {
             }
         }
     };
-    disable_raw_mode().context("failed to leave Coven's magical terminal mode")?;
+    raw_mode.restore()?;
     println!();
 
     run_magical_tui_request(request?)
