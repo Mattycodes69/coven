@@ -410,6 +410,9 @@ fn run_magical_tui() -> Result<()> {
                 KeyCode::Backspace => {
                     input.pop();
                 }
+                KeyCode::Char('u') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                    input.clear();
+                }
                 KeyCode::Enter => {
                     if input.trim().is_empty() {
                         break Ok(MagicalTuiRequest::Action(
@@ -1098,19 +1101,19 @@ fn render_magical_tui_frame_with_mode_and_width(
     let reset = theme::Reset::with_mode(mode);
     let mut frame = String::new();
     frame.push_str(&magical_tui_line(
-        "COVEN",
+        "CovenCLI",
         primary_strong,
         reset,
         inner_width,
     ));
     frame.push_str(&magical_tui_line(
-        "Prompt-first agent console",
+        "Welcome back to the Coven.",
         field_label,
         reset,
         inner_width,
     ));
     frame.push_str(&magical_tui_line(
-        "Type natural language, or use slash commands.",
+        "OpenCoven terminal home for local agent work.",
         user_label,
         reset,
         inner_width,
@@ -1121,23 +1124,28 @@ fn render_magical_tui_frame_with_mode_and_width(
     }
     frame.push('\n');
     frame.push_str(&magical_tui_line(
-        "Input",
+        "Status",
         primary_strong,
         reset,
         inner_width,
     ));
+    for line in magical_tui_status_lines() {
+        frame.push_str(&magical_tui_line(line, field_label, reset, inner_width));
+    }
+    frame.push('\n');
     frame.push_str(&magical_tui_line(
-        &magical_tui_prompt_row(input, inner_width),
-        user_label,
+        "Task inbox",
+        primary_strong,
         reset,
         inner_width,
     ));
-    frame.push_str(&magical_tui_line(
-        "Enter runs input. Empty Enter runs selected slash. Esc quits.",
-        dim,
-        reset,
-        inner_width,
-    ));
+    for line in magical_tui_task_inbox_lines() {
+        frame.push_str(&magical_tui_line(line, primary, reset, inner_width));
+    }
+    frame.push('\n');
+    for line in magical_tui_input_box_lines(input, inner_width) {
+        frame.push_str(&magical_tui_line(&line, user_label, reset, inner_width));
+    }
     frame.push('\n');
 
     frame.push_str(&magical_tui_line(
@@ -1160,7 +1168,7 @@ fn render_magical_tui_frame_with_mode_and_width(
     let selected = magical_tui_items()[selection.min(magical_tui_items().len() - 1)];
     frame.push('\n');
     frame.push_str(&magical_tui_line(
-        "Selected slash",
+        "Selected command",
         primary_strong,
         reset,
         inner_width,
@@ -1172,7 +1180,7 @@ fn render_magical_tui_frame_with_mode_and_width(
         inner_width,
     ));
     frame.push_str(&magical_tui_line(
-        &format!("{} → {}", selected.slash, selected.command),
+        &format!("{} => {}", selected.slash, selected.command),
         primary_strong,
         reset,
         inner_width,
@@ -1188,13 +1196,38 @@ fn render_magical_tui_frame_with_mode_and_width(
 
 fn magical_tui_graph_lines() -> &'static [&'static str] {
     &[
-        "        [nova]          [cody]",
-        "          |              |",
-        "          |              |",
-        " [memory] -- [coven] -- [sessions]",
-        "          |              |",
-        "          |              |",
-        "     [gateway]      [claude]",
+        "+-------------------------- Workspace map -----------------------------+",
+        "| workspace: current repo            branch: local checkout            |",
+        "| harness shelf: Codex | Claude Code | local adapters                  |",
+        "|                                                                      |",
+        "|       [nova] ------ [coven] ------ [cody]                            |",
+        r"|          |            /   \           |                              |",
+        r"|          |           /     \          |                              |",
+        "| [memory] -- [coven] -- [sessions] -- [review]                        |",
+        r"|          |                              \                            |",
+        "|     [gateway]                     local daemon                       |",
+        "|                                                                      |",
+        "| prompt floor: ask | slash | attach | summon | archive | sacrifice    |",
+        "+----------------------------------------------------------------------+",
+    ]
+}
+
+fn magical_tui_status_lines() -> &'static [&'static str] {
+    &[
+        "System snapshot   local-first session ledger | ~/.coven",
+        "Model lane        Codex ready | Claude Code ready | PTY guarded",
+        "Context           repo, docs, memory, sessions, and slash palette",
+        "Approvals         asks before secrets, deletes, pushes, or public moves",
+        "Release notes     CovenCLI now opens as a rich terminal home",
+        "Tips              type a task, /run <harness>, or choose below",
+    ]
+}
+
+fn magical_tui_task_inbox_lines() -> &'static [&'static str] {
+    &[
+        "[ ] inspect repo      [ ] launch harness      [ ] attach session",
+        "[ ] review diff       [ ] export trace        [ ] archive work",
+        "Claude Code style: welcome, status, context, prompt, command rail",
     ]
 }
 
@@ -1205,6 +1238,51 @@ fn magical_tui_prompt_row(input: &str, inner_width: usize) -> String {
         input
     };
     fit_chars(&format!("> {value}"), inner_width)
+}
+
+fn magical_tui_input_box_lines(input: &str, inner_width: usize) -> Vec<String> {
+    let width = normalized_magical_tui_inner_width(inner_width);
+    let content_width = width.saturating_sub(4).max(1);
+    let prompt = magical_tui_prompt_row(input, content_width);
+    let hint = fit_chars(
+        "Enter sends. Empty Enter runs selected slash. Ctrl+U clears. Esc quits.",
+        content_width,
+    );
+    vec![
+        magical_tui_input_box_top(width),
+        magical_tui_input_box_row(&prompt, width),
+        magical_tui_input_box_row(&hint, width),
+        magical_tui_input_box_bottom(width),
+    ]
+}
+
+fn magical_tui_input_box_top(width: usize) -> String {
+    let label = "+-- Ask anything ";
+    if width <= 2 {
+        return fit_chars(label, width);
+    }
+    if width <= label.chars().count() + 1 {
+        return fit_chars(label, width);
+    }
+    let fill = width - label.chars().count() - 1;
+    format!("{label}{}+", "-".repeat(fill))
+}
+
+fn magical_tui_input_box_bottom(width: usize) -> String {
+    if width <= 2 {
+        return "-".repeat(width);
+    }
+    format!("+{}+", "-".repeat(width - 2))
+}
+
+fn magical_tui_input_box_row(content: &str, width: usize) -> String {
+    if width <= 2 {
+        return fit_chars(content, width);
+    }
+    let content_width = width.saturating_sub(4).max(1);
+    let fitted = fit_chars(content, content_width);
+    let padding = content_width.saturating_sub(fitted.chars().count());
+    format!("| {fitted}{} |", " ".repeat(padding))
 }
 
 fn magical_tui_line(
@@ -2132,8 +2210,9 @@ mod tests {
     fn magical_tui_frame_uses_purple_gold_branding_and_lists_core_actions() {
         let frame = render_magical_tui_frame_plain(1);
 
-        assert!(frame.contains("COVEN"));
-        assert!(frame.contains("Prompt-first agent console"));
+        assert!(frame.contains("CovenCLI"));
+        assert!(frame.contains("Welcome back to the Coven."));
+        assert!(frame.contains("OpenCoven terminal home"));
         assert!(frame.contains("[coven]"));
         assert!(frame.contains("/start"));
         assert!(frame.contains("/help"));
@@ -2187,7 +2266,7 @@ mod tests {
     fn magical_tui_frame_previews_selected_spell_command() {
         let frame = render_magical_tui_frame_plain(0);
 
-        assert!(frame.contains("Selected slash"));
+        assert!(frame.contains("Selected command"));
         assert!(frame.contains("/start"));
         assert!(frame.contains("coven doctor"));
         assert!(frame.contains("~/.coven"));
@@ -2197,7 +2276,7 @@ mod tests {
     fn magical_tui_frame_is_newcomer_friendly() {
         let frame = render_magical_tui_frame_plain(5);
 
-        assert!(frame.contains("Type natural language"));
+        assert!(frame.contains("Ask anything"));
         assert!(frame.contains("Empty Enter runs selected slash"));
         assert!(frame.contains("Slash commands"));
         assert!(frame.contains("Launch Codex"));
@@ -2212,11 +2291,64 @@ mod tests {
     }
 
     #[test]
+    fn magical_tui_frame_renders_prompt_as_a_bordered_input_box() {
+        let frame = render_magical_tui_frame_plain_with_input(0, "summarize the repo", 76);
+
+        assert!(frame.contains("+-- Ask anything "));
+        assert!(frame.contains("| > summarize the repo"));
+        assert!(frame.contains("Ctrl+U clears"));
+    }
+
+    #[test]
     fn magical_tui_frame_includes_obsidian_style_graph() {
         let frame = render_magical_tui_frame_plain(0);
 
         assert!(frame.contains("[memory] -- [coven] -- [sessions]"));
         assert!(frame.contains("[gateway]"));
+    }
+
+    #[test]
+    fn magical_tui_frame_emulates_intricate_claude_code_home_without_emoji() {
+        let frame = render_magical_tui_frame_plain(0);
+
+        assert!(frame.contains("workspace"));
+        assert!(frame.contains("harness shelf"));
+        assert!(frame.contains("Codex ready"));
+        assert!(frame.contains("Claude Code ready"));
+        assert!(frame.contains("Release notes"));
+        assert!(frame.contains("Tips"));
+        assert!(
+            frame
+                .chars()
+                .all(|ch| ch == '\n' || ch == '\r' || ch.is_ascii()),
+            "TUI should stay icon/ASCII-only"
+        );
+    }
+
+    #[test]
+    fn magical_tui_frame_reads_like_a_claude_code_style_terminal_home() {
+        let frame = render_magical_tui_frame_plain(0);
+
+        assert!(frame.contains("System snapshot"));
+        assert!(frame.contains("Model lane"));
+        assert!(frame.contains("Workspace map"));
+        assert!(frame.contains("Task inbox"));
+        assert!(frame.contains("Context"));
+        assert!(frame.contains("Approvals"));
+    }
+
+    #[test]
+    fn magical_tui_frame_stays_within_supported_screen_widths() {
+        for inner_width in [18, 24, 34, 76, 96] {
+            let frame = render_magical_tui_frame_plain_with_width(3, inner_width);
+
+            for line in frame.lines() {
+                assert!(
+                    line.chars().count() <= inner_width,
+                    "line exceeded width {inner_width}: {line}"
+                );
+            }
+        }
     }
 
     #[test]
