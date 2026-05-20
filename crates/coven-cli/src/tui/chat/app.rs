@@ -1070,6 +1070,58 @@ mod tests {
     }
 
     #[test]
+    fn clean_terminal_output_strips_osc_title_terminated_by_bel() {
+        // `ESC ] 0 ; <title> BEL` is the canonical xterm title-setting OSC.
+        // Both the introducer and the payload must be fully consumed.
+        let cleaned = clean_terminal_output("before\x1b]0;Window Title\x07after")
+            .expect("non-empty after sanitization");
+        assert_eq!(cleaned, "beforeafter");
+        assert!(!cleaned.contains('\x1b'));
+        assert!(!cleaned.contains("Window Title"));
+        assert!(!cleaned.contains('\x07'));
+    }
+
+    #[test]
+    fn clean_terminal_output_strips_osc_hyperlink_terminated_by_st() {
+        // OSC 8 hyperlinks use the ESC-backslash String Terminator, not BEL.
+        // The visible "link text" between the opening and closing OSC must
+        // survive; everything else (URL, terminators) must be stripped.
+        let input = "\x1b]8;;https://example.com/\x1b\\link text\x1b]8;;\x1b\\!";
+        let cleaned = clean_terminal_output(input).expect("non-empty after sanitization");
+        assert_eq!(cleaned, "link text!");
+        assert!(!cleaned.contains('\x1b'));
+        assert!(!cleaned.contains("example.com"));
+    }
+
+    #[test]
+    fn clean_terminal_output_applies_backspaces_to_prior_chars() {
+        // `\x08` pops the most recently emitted char so harness output that
+        // uses backspace for in-place rewrites (e.g. progress spinners) does
+        // not leave the pre-rewrite text in the chat transcript.
+        let cleaned = clean_terminal_output("Hello\x08\x08world")
+            .expect("non-empty after sanitization");
+        assert_eq!(cleaned, "Helworld");
+    }
+
+    #[test]
+    fn clean_terminal_output_drops_messages_that_are_pure_control_noise() {
+        // Cursor-visibility toggles, mode sets, and similar invisible-only
+        // sequences must not create empty chat bubbles.
+        assert_eq!(clean_terminal_output("\x1b[?25l\x1b[?25h"), None);
+        assert_eq!(clean_terminal_output("\x1b]0;just a title\x07"), None);
+        assert_eq!(clean_terminal_output("\r\r\r"), None);
+    }
+
+    #[test]
+    fn clean_terminal_output_preserves_tabs_and_newlines() {
+        // Tabs and newlines are the only whitespace control chars we keep —
+        // they carry layout information harnesses rely on for readability.
+        let cleaned = clean_terminal_output("col1\tcol2\nrow2\tend")
+            .expect("non-empty after sanitization");
+        assert_eq!(cleaned, "col1\tcol2\nrow2\tend");
+    }
+
+    #[test]
     fn poll_session_events_backs_off_and_coalesces_repeated_failures() {
         let client = RecordingChatClient::default();
         *client.event_error.borrow_mut() = Some("daemon unavailable".to_string());
