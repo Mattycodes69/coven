@@ -33,6 +33,7 @@ const DEFAULT_TITLE_CHARS: usize = 48;
 
 #[derive(Parser, Debug)]
 #[command(name = "coven")]
+#[command(version = env!("COVEN_VERSION_DESC"))]
 #[command(about = "Run project-scoped coding agents without memorizing harness commands")]
 #[command(
     long_about = "Coven runs Codex, Claude Code, and future harnesses inside a local, project-scoped session ledger. Run `coven` with no arguments for a beginner-friendly menu."
