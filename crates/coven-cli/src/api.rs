@@ -170,6 +170,7 @@ pub fn handle_request_with_runtime(
         ),
         ("GET", "/health") => json_response(200, &health_response(daemon)),
         ("GET", "/capabilities") => json_response(200, &control_plane::capabilities()),
+        ("GET", "/overview") => overview_response(coven_home),
         ("POST", "/actions") => {
             let payload = match parse_body(body) {
                 Ok(payload) => payload,
@@ -183,6 +184,7 @@ pub fn handle_request_with_runtime(
             let (status, response) = control_plane::route_action(payload);
             json_response(status, &response)
         }
+        ("POST", "/cast") => submit_cast(coven_home, body),
         ("GET", "/sessions") => {
             let conn = store::open_store(&store_path(coven_home))?;
             let sessions = store::list_sessions(&conn)?;
@@ -196,6 +198,10 @@ pub fn handle_request_with_runtime(
         ("POST", path) if path.starts_with("/sessions/") && path.ends_with("/kill") => {
             let session_id = session_action_id(path, "/kill");
             kill_session(coven_home, session_id, runtime)
+        }
+        ("GET", path) if path.starts_with("/sessions/") && path.ends_with("/log") => {
+            let session_id = session_action_id(path, "/log");
+            list_session_log(coven_home, session_id)
         }
         ("GET", path) if path.starts_with("/sessions/") => {
             let session_id = path.trim_start_matches("/sessions/");
@@ -512,6 +518,117 @@ fn kill_session(
     json_response(202, &json!({ "ok": true, "accepted": true }))
 }
 
+#[derive(Debug, Clone, Serialize)]
+struct CastResultDto {
+    accepted: bool,
+    cast_id: String,
+    echo: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct OverviewDto {
+    active_familiars: u32,
+    total_familiars: u32,
+    open_sessions: u32,
+    skills_count: u32,
+    average_skill_score: u32,
+    research_iterations: u32,
+    last_research_delta: i32,
+}
+
+fn overview_response(coven_home: &Path) -> Result<ApiResponse> {
+    let conn = store::open_store(&store_path(coven_home))?;
+    let sessions = store::list_sessions(&conn)?;
+    let open_sessions = sessions
+        .iter()
+        .filter(|s| s.status == "running" || s.status == "active")
+        .count() as u32;
+    json_response(
+        200,
+        &OverviewDto {
+            active_familiars: 0,
+            total_familiars: 0,
+            open_sessions,
+            skills_count: 0,
+            average_skill_score: 0,
+            research_iterations: 0,
+            last_research_delta: 0,
+        },
+    )
+}
+
+fn submit_cast(coven_home: &Path, body: Option<&str>) -> Result<ApiResponse> {
+    let payload = match parse_body(body) {
+        Ok(payload) => payload,
+        Err(error) => {
+            return api_error(400, "invalid_request", &error.to_string(), None);
+        }
+    };
+    let code = match required_string(&payload, "code") {
+        Ok(code) => code,
+        Err(error) => {
+            return api_error(400, "invalid_request", &error.to_string(), None);
+        }
+    };
+    let target = payload
+        .get("target")
+        .and_then(Value::as_str)
+        .filter(|t| !t.is_empty())
+        .map(str::to_string);
+    let cast_id = format!("cast-{}", Uuid::new_v4().simple());
+    let echo = match &target {
+        Some(t) => format!("{code} → {t}"),
+        None => code.clone(),
+    };
+
+    let conn = store::open_store(&store_path(coven_home))?;
+    let session_id = target.as_deref().unwrap_or("__cockpit__");
+    if session_id == "__cockpit__" {
+        ensure_cockpit_session(&conn)?;
+    } else if store::get_session(&conn, session_id)?.is_none() {
+        return api_error(
+            404,
+            "session_not_found",
+            "Target session was not found.",
+            Some(json!({ "sessionId": session_id })),
+        );
+    }
+    insert_event(
+        &conn,
+        session_id,
+        "cast",
+        json!({ "cast_id": cast_id, "code": code, "target": target }),
+    )?;
+    json_response(
+        202,
+        &CastResultDto {
+            accepted: true,
+            cast_id,
+            echo,
+        },
+    )
+}
+
+fn ensure_cockpit_session(conn: &rusqlite::Connection) -> Result<()> {
+    // INSERT OR IGNORE keeps this atomic under concurrent Unix + TCP accept
+    // loops — both transports can race the first cast through this path.
+    let now = current_timestamp();
+    let record = store::SessionRecord {
+        id: "__cockpit__".into(),
+        project_root: "(cockpit)".into(),
+        harness: "cockpit".into(),
+        title: "Cockpit Cast Codes".into(),
+        status: "idle".into(),
+        exit_code: None,
+        archived_at: None,
+        created_at: now.clone(),
+        updated_at: now,
+        conversation_id: None,
+    };
+    store::insert_session_if_absent(conn, &record)?;
+    Ok(())
+}
+
 fn session_not_live_response(session_id: &str) -> Result<ApiResponse> {
     api_error(
         409,
@@ -584,6 +701,67 @@ fn list_session_events(coven_home: &Path, session_id: &str, query: &str) -> Resu
             has_more,
         },
     )
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct LogLineDto {
+    ts: String,
+    level: &'static str,
+    message: String,
+}
+
+fn list_session_log(coven_home: &Path, session_id: &str) -> Result<ApiResponse> {
+    let conn = store::open_store(&store_path(coven_home))?;
+    if store::get_session(&conn, session_id)?.is_none() {
+        return api_error(
+            404,
+            "session_not_found",
+            "Session was not found.",
+            Some(json!({ "sessionId": session_id })),
+        );
+    }
+    let opts = store::EventsQueryOptions::default();
+    let events = store::list_events_with_options(&conn, session_id, &opts)?;
+    let lines: Vec<LogLineDto> = events.into_iter().map(event_to_log_line).collect();
+    json_response(200, &lines)
+}
+
+fn event_to_log_line(event: store::EventRecord) -> LogLineDto {
+    let payload: Value = serde_json::from_str(&event.payload_json).unwrap_or(Value::Null);
+    let preview = payload_preview(&payload);
+    let (level, message) = match event.kind.as_str() {
+        "input" => ("info", format!("> {preview}")),
+        "output" => ("info", preview),
+        "tool_call" => ("tool", preview),
+        "error" => ("error", preview),
+        other => ("info", format!("{other}: {preview}")),
+    };
+    LogLineDto {
+        ts: event.created_at,
+        level,
+        message,
+    }
+}
+
+fn payload_preview(payload: &Value) -> String {
+    const MAX: usize = 240;
+    // `data` is what the daemon's input/output events actually carry (see
+    // `LiveSessionRuntime::send_input` and the output observer); `text` and
+    // `message` cover hand-rolled event shapes we may emit later.
+    let text = payload
+        .get("text")
+        .or_else(|| payload.get("message"))
+        .or_else(|| payload.get("data"))
+        .and_then(Value::as_str)
+        .map(ToOwned::to_owned)
+        .unwrap_or_else(|| payload.to_string());
+    if text.chars().count() > MAX {
+        let mut truncated: String = text.chars().take(MAX).collect();
+        truncated.push('…');
+        truncated
+    } else {
+        text
+    }
 }
 
 fn insert_event(
@@ -2022,6 +2200,223 @@ mod tests {
 
         assert_eq!(response.status, 404);
         assert!(response.body.contains(r#""code":"session_not_found""#));
+        Ok(())
+    }
+
+    #[test]
+    fn get_session_log_returns_log_lines_from_events() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        let home = temp.path();
+        let conn = store::open_store(&store_path(home))?;
+        let session = store::SessionRecord {
+            id: "sess-log".into(),
+            project_root: "/tmp/proj".into(),
+            harness: "claude".into(),
+            title: "demo".into(),
+            status: "running".into(),
+            exit_code: None,
+            archived_at: None,
+            created_at: "2026-01-01T00:00:00Z".into(),
+            updated_at: "2026-01-01T00:00:00Z".into(),
+            conversation_id: None,
+        };
+        store::insert_session(&conn, &session)?;
+        insert_event(&conn, "sess-log", "input", json!({"text": "hello"}))?;
+        insert_event(&conn, "sess-log", "output", json!({"text": "world"}))?;
+        insert_event(&conn, "sess-log", "error", json!({"message": "boom"}))?;
+        drop(conn);
+
+        let response = handle_request("GET", "/api/v1/sessions/sess-log/log", home, None)?;
+        assert_eq!(response.status, 200);
+        let body: serde_json::Value = serde_json::from_str(&response.body)?;
+        let lines = body.as_array().expect("array body");
+        assert_eq!(lines.len(), 3);
+        assert_eq!(lines[0]["level"], "info");
+        assert!(lines[0]["message"].as_str().unwrap().contains("hello"));
+        assert_eq!(lines[2]["level"], "error");
+        assert!(lines[2]["message"].as_str().unwrap().contains("boom"));
+        Ok(())
+    }
+
+    #[test]
+    fn get_session_log_returns_404_for_unknown_session() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        let response = handle_request("GET", "/api/v1/sessions/missing/log", temp.path(), None)?;
+        assert_eq!(response.status, 404);
+        assert!(
+            response.body.contains(r#""sessionId":"missing""#),
+            "expected sessionId 'missing' (not 'missing/log'); got: {}",
+            response.body
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn post_cast_records_event_and_returns_result() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        let body = json!({
+            "code": "/status",
+            "target": null,
+        });
+        let response = handle_request_with_body(
+            "POST",
+            "/api/v1/cast",
+            temp.path(),
+            None,
+            Some(&body.to_string()),
+        )?;
+        assert_eq!(response.status, 202);
+        let result: serde_json::Value = serde_json::from_str(&response.body)?;
+        assert_eq!(result["accepted"], true);
+        assert!(result["cast_id"]
+            .as_str()
+            .expect("cast_id")
+            .starts_with("cast-"));
+        assert_eq!(result["echo"], "/status");
+        Ok(())
+    }
+
+    #[test]
+    fn post_cast_rejects_missing_code() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        let body = json!({ "target": "sess-1" });
+        let response = handle_request_with_body(
+            "POST",
+            "/api/v1/cast",
+            temp.path(),
+            None,
+            Some(&body.to_string()),
+        )?;
+        assert_eq!(response.status, 400);
+        Ok(())
+    }
+
+    #[test]
+    fn post_cast_with_target_logs_event_to_session() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        let home = temp.path();
+
+        let conn = store::open_store(&store_path(home))?;
+        let session = store::SessionRecord {
+            id: "sess-target".into(),
+            project_root: "/tmp/proj".into(),
+            harness: "claude".into(),
+            title: "demo".into(),
+            status: "running".into(),
+            exit_code: None,
+            archived_at: None,
+            created_at: "2026-01-01T00:00:00Z".into(),
+            updated_at: "2026-01-01T00:00:00Z".into(),
+            conversation_id: None,
+        };
+        store::insert_session(&conn, &session)?;
+        drop(conn);
+
+        let body = json!({ "code": "/handoff", "target": "sess-target" });
+        let response =
+            handle_request_with_body("POST", "/api/v1/cast", home, None, Some(&body.to_string()))?;
+        assert_eq!(response.status, 202);
+        let result: serde_json::Value = serde_json::from_str(&response.body)?;
+        assert_eq!(result["accepted"], true);
+        assert_eq!(result["echo"], "/handoff → sess-target");
+
+        // Verify the cast landed as an event on the target session, not __cockpit__.
+        let log_response = handle_request("GET", "/api/v1/sessions/sess-target/log", home, None)?;
+        assert_eq!(log_response.status, 200);
+        let lines: serde_json::Value = serde_json::from_str(&log_response.body)?;
+        let arr = lines.as_array().expect("array body");
+        assert_eq!(arr.len(), 1);
+        assert!(
+            arr[0]["message"].as_str().unwrap().contains("/handoff"),
+            "expected log message to contain code; got: {}",
+            arr[0]["message"]
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn post_cast_with_unknown_target_returns_404() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        let body = json!({ "code": "/status", "target": "no-such-session" });
+        let response = handle_request_with_body(
+            "POST",
+            "/api/v1/cast",
+            temp.path(),
+            None,
+            Some(&body.to_string()),
+        )?;
+        assert_eq!(response.status, 404);
+        assert!(
+            response.body.contains(r#""code":"session_not_found""#),
+            "expected session_not_found body; got: {}",
+            response.body
+        );
+        assert!(
+            response.body.contains(r#""sessionId":"no-such-session""#),
+            "expected sessionId in error details; got: {}",
+            response.body
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn post_cast_without_target_idempotently_uses_cockpit_session() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        let home = temp.path();
+        let body = json!({ "code": "/status" });
+        for _ in 0..3 {
+            let response = handle_request_with_body(
+                "POST",
+                "/api/v1/cast",
+                home,
+                None,
+                Some(&body.to_string()),
+            )?;
+            assert_eq!(response.status, 202);
+        }
+        // Only one __cockpit__ row should exist; all three casts land as events on it.
+        let conn = store::open_store(&store_path(home))?;
+        let sessions = store::list_sessions(&conn)?;
+        let cockpit_count = sessions.iter().filter(|s| s.id == "__cockpit__").count();
+        assert_eq!(
+            cockpit_count, 1,
+            "expected exactly one __cockpit__ session row"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn get_overview_returns_session_count_and_zeroed_unknowns() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        let home = temp.path();
+        let conn = store::open_store(&store_path(home))?;
+        for id in ["s1", "s2", "s3"] {
+            let now = "2026-01-01T00:00:00Z";
+            let status = if id == "s3" { "ended" } else { "running" };
+            store::insert_session(
+                &conn,
+                &store::SessionRecord {
+                    id: id.into(),
+                    project_root: "/tmp".into(),
+                    harness: "claude".into(),
+                    title: "t".into(),
+                    status: status.into(),
+                    exit_code: None,
+                    archived_at: None,
+                    created_at: now.into(),
+                    updated_at: now.into(),
+                    conversation_id: None,
+                },
+            )?;
+        }
+        drop(conn);
+
+        let response = handle_request("GET", "/api/v1/overview", home, None)?;
+        assert_eq!(response.status, 200);
+        let body: serde_json::Value = serde_json::from_str(&response.body)?;
+        assert_eq!(body["open_sessions"], 2);
+        assert_eq!(body["active_familiars"], 0);
+        assert_eq!(body["skills_count"], 0);
         Ok(())
     }
 }

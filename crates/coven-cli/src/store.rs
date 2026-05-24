@@ -288,6 +288,38 @@ pub fn insert_session(conn: &Connection, record: &SessionRecord) -> Result<()> {
     Ok(())
 }
 
+pub fn insert_session_if_absent(conn: &Connection, record: &SessionRecord) -> Result<bool> {
+    let affected = conn
+        .execute(
+            "INSERT OR IGNORE INTO sessions (
+                id,
+                project_root,
+                harness,
+                title,
+                status,
+                exit_code,
+                archived_at,
+                created_at,
+                updated_at,
+                conversation_id
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+            params![
+                &record.id,
+                &record.project_root,
+                &record.harness,
+                &record.title,
+                &record.status,
+                record.exit_code,
+                &record.archived_at,
+                &record.created_at,
+                &record.updated_at,
+                &record.conversation_id,
+            ],
+        )
+        .with_context(|| format!("failed to upsert session {}", record.id))?;
+    Ok(affected > 0)
+}
+
 pub fn update_session_status(
     conn: &Connection,
     session_id: &str,
