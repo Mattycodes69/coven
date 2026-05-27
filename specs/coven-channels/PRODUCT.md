@@ -15,7 +15,7 @@ This spec defines `@opencoven/channels`: the first Coven-level channel connector
 - Any familiar — Charm, Kitty, or one not yet named — can post to a Discord channel by calling a single Coven abstraction
 - The channel connector lives in OpenCoven, not OpenClaw. Harness-agnostic by design
 - Discord v1 uses a Bot token (not a webhook) to establish a foundation for bidirectional communication in v2
-- Per-familiar identity (display name, avatar) is supported from day one via Discord's `username` + `avatar_url` override on webhook-style messages, or via thread/embed author fields through the bot
+- Per-familiar identity (display name, avatar) is supported from day one through bot-compatible message presentation, such as embed author fields
 - The interface is small and stable: post a message, that's it for v1
 
 ## Non-goals (v1)
