@@ -172,7 +172,7 @@ export async function resolveToken(): Promise<string> {
     // keychain not available; continue
   }
   throw new Error(
-    'Discord bot token not found. Set COVEN_DISCORD_TOKEN or store it with: coven secrets set discord.token <token>'
+    'Discord bot token not found. Set COVEN_DISCORD_TOKEN.'
   );
 }
 ```
