@@ -9,8 +9,6 @@ description: "Guide to the @opencoven/channels Discord connector: bot setup, con
 
 # Discord channel connector
 
-> **Status:** Draft v1 (spec-only). `@opencoven/channels` is not implemented in this repository yet. The API examples below describe the planned interface and are not runnable commands.
-
 `@opencoven/channels` lets any familiar post to Discord without going through a harness-specific API. One package, one interface — today Discord, eventually anywhere.
 
 ```mermaid
@@ -48,6 +46,8 @@ Never put the token in a config file. Store it in your environment:
 # env (for CI or one-off use)
 export COVEN_DISCORD_TOKEN=your_token_here
 
+# For persistent local use, add it to your shell profile or a .env file
+# that is gitignored and sourced before running the Coven daemon.
 ```
 
 ### 3. Map logical channel names
@@ -65,10 +65,11 @@ coven-updates = "YOUR_UPDATES_CHANNEL_ID"
 
 To find a channel ID: right-click a channel in Discord → **Copy Channel ID** (requires Developer Mode enabled in Discord settings).
 
-## Planned usage (draft)
+## Usage
 
 ```typescript
-// Planned package API (spec-only)
+import { createConnector } from '@opencoven/channels';
+
 const discord = await createConnector('discord');
 
 await discord.send('coven-general', {
@@ -99,7 +100,13 @@ From a reader's perspective, posts feel like they come from the familiar. From a
 
 ## Smoke test
 
-A runnable smoke test command will be documented once `@opencoven/channels` lands in this repository.
+> **Note:** Not runnable until `packages/channels/` is implemented.
+
+To verify the connector is working once the package lands:
+
+```sh
+COVEN_TEST_CHANNEL_ID=YOUR_CHANNEL_ID node --test packages/channels/test/discord.smoke.ts
+```
 
 ## Bidirectionality (v2)
 
@@ -117,7 +124,7 @@ This uses the Discord Gateway WebSocket and requires the `Message Content Intent
 
 | Error | Fix |
 |---|---|
-| `Discord bot token not found` | Set `COVEN_DISCORD_TOKEN` in the environment where Coven runs |
+| `Discord bot token not found` | Set `COVEN_DISCORD_TOKEN` or run `coven secrets set discord.token <token>` |
 | `403 Missing Permissions` | Ensure the bot has `Send Messages` + `Embed Links` in the target channel |
 | `404 Unknown Channel` | Check the channel ID in `coven.toml` and that the bot is in the server |
 | `401 Unauthorized` | Token is wrong or expired — regenerate in the Discord Dev Portal |
